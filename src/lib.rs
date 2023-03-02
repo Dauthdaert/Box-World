@@ -1,21 +1,20 @@
 use bevy::{
     pbr::wireframe::{Wireframe, WireframeConfig, WireframePlugin},
     prelude::*,
-    render::{
-        render_resource::{Extent3d, TextureDimension, TextureFormat},
-        settings::{WgpuFeatures, WgpuSettings},
-    },
+    render::settings::{WgpuFeatures, WgpuSettings},
+    tasks::{AsyncComputeTaskPool, Task},
 };
 use bevy_flycam::{FlyCam, NoCameraPlayerPlugin};
 use bevy_inspector_egui::*;
-use block_mesh::ndshape::ConstShape;
-use chunk::{Chunk, ChunkBoundary};
+use futures_lite::future;
+
 use mesher::generate_mesh;
-use voxel::Voxel;
+use world::ChunkPos;
 
 mod chunk;
 mod mesher;
 mod voxel;
+mod world;
 
 pub fn app() -> App {
     let mut app = App::new();
@@ -39,7 +38,7 @@ pub fn app() -> App {
 
     app.add_startup_system(setup);
 
-    //app.add_system(rotate);
+    app.add_system(load_around_camera).add_system(handle_meshes);
 
     app
 }
@@ -51,67 +50,12 @@ fn setup(
     mut commands: Commands,
     mut wireframe_config: ResMut<WireframeConfig>,
     mut meshes: ResMut<Assets<Mesh>>,
-    mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
 ) {
     wireframe_config.global = false;
 
-    let debug_material = materials.add(StandardMaterial {
-        base_color_texture: Some(images.add(uv_debug_texture())),
-        ..default()
-    });
-
-    let mut chunks = Vec::new();
-
-    for _ in 0..10 {
-        let mut chunk = Chunk::default();
-
-        for i in 0..Chunk::size() {
-            let (x, y, _z) = Chunk::delinearize(i);
-
-            let voxel = if ((y * x) as f32).sqrt() < 10.0 {
-                Voxel::Opaque(1)
-            } else {
-                Voxel::Empty
-            };
-
-            chunk.voxels[i as usize] = voxel;
-        }
-
-        chunks.push(chunk);
-    }
-
-    let mut boundaries = Vec::new();
-    for (i, chunk) in chunks.iter().enumerate() {
-        boundaries.push(ChunkBoundary::new(
-            chunk.clone(),
-            [
-                chunks.get(i + 1).cloned().unwrap_or_default(),
-                chunks.get(i.wrapping_sub(1)).cloned().unwrap_or_default(),
-                Chunk::default(),
-                Chunk::default(),
-                Chunk::default(),
-                Chunk::default(),
-            ],
-        ));
-    }
-
-    for (i, shape) in boundaries.into_iter().enumerate() {
-        commands.spawn((
-            PbrBundle {
-                mesh: meshes.add(generate_mesh(&shape)),
-                material: debug_material.clone(),
-                transform: Transform::from_xyz(
-                    (i * chunk::ChunkShape::ARRAY[0] as usize) as f32,
-                    2.0,
-                    0.0,
-                ),
-                ..default()
-            },
-            Shape,
-            Wireframe,
-        ));
-    }
+    let world = world::World::new();
+    commands.insert_resource(world);
 
     commands.spawn(PointLightBundle {
         point_light: PointLight {
@@ -141,30 +85,77 @@ fn setup(
     ));
 }
 
-/// Creates a colorful test pattern
-fn uv_debug_texture() -> Image {
-    const TEXTURE_SIZE: usize = 8;
+#[derive(Component)]
+struct ComputeMesh(Task<Vec<(ChunkPos, Mesh)>>);
 
-    let mut palette: [u8; 32] = [
-        255, 102, 159, 255, 255, 159, 102, 255, 236, 255, 102, 255, 121, 255, 102, 255, 102, 255,
-        198, 255, 102, 198, 255, 255, 121, 102, 255, 255, 236, 102, 255, 255,
-    ];
+fn load_around_camera(
+    mut commands: Commands,
+    mut world: ResMut<world::World>,
+    camera_query: Query<&Transform, With<FlyCam>>,
+    chunk_query: Query<(Entity, &ChunkPos)>,
+) {
+    const VIEW_DISTANCE: u32 = 16;
 
-    let mut texture_data = [0; TEXTURE_SIZE * TEXTURE_SIZE * 4];
-    for y in 0..TEXTURE_SIZE {
-        let offset = TEXTURE_SIZE * y * 4;
-        texture_data[offset..(offset + TEXTURE_SIZE * 4)].copy_from_slice(&palette);
-        palette.rotate_right(4);
+    let camera_translation = camera_query.single().translation;
+    let camera_chunk_pos = ChunkPos::from_world(
+        camera_translation.x,
+        camera_translation.y,
+        camera_translation.z,
+    );
+
+    let unloaded = world.unload_outside_range(camera_chunk_pos, VIEW_DISTANCE);
+    // TODO: Requires heavy optimisation. Should have a pos to entity index in world.
+    for (chunk, pos) in chunk_query.iter() {
+        if unloaded.contains(pos) {
+            commands.entity(chunk).despawn_recursive();
+        }
     }
 
-    Image::new_fill(
-        Extent3d {
-            width: TEXTURE_SIZE as u32,
-            height: TEXTURE_SIZE as u32,
-            depth_or_array_layers: 1,
-        },
-        TextureDimension::D2,
-        &texture_data,
-        TextureFormat::Rgba8UnormSrgb,
-    )
+    let thread_pool = AsyncComputeTaskPool::get();
+    let loaded = world.load_inside_range(camera_chunk_pos, VIEW_DISTANCE);
+    for chunk_pos_chunk in loaded.chunks(8) {
+        let mut boundaries = Vec::new();
+        for chunk_pos in chunk_pos_chunk.iter() {
+            if let Some(boundary) = world.get_chunk_boundary(*chunk_pos) {
+                boundaries.push((*chunk_pos, boundary));
+            }
+        }
+        let task = thread_pool.spawn(async move {
+            boundaries
+                .iter()
+                .map(|(chunk_pos, boundary)| (*chunk_pos, generate_mesh(boundary)))
+                .collect()
+        });
+        commands.spawn(ComputeMesh(task));
+    }
+}
+
+fn handle_meshes(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut mesh_tasks: Query<(Entity, &mut ComputeMesh)>,
+) {
+    for (entity, mut task) in mesh_tasks.iter_mut() {
+        if let Some(chunks) = future::block_on(future::poll_once(&mut task.0)) {
+            for (chunk_pos, mesh) in chunks {
+                let chunk_world_pos = chunk_pos.to_world();
+                commands.spawn((
+                    PbrBundle {
+                        mesh: meshes.add(mesh),
+                        transform: Transform::from_xyz(
+                            chunk_world_pos.0,
+                            chunk_world_pos.1,
+                            chunk_world_pos.2,
+                        ),
+                        ..default()
+                    },
+                    Shape,
+                    Wireframe,
+                    chunk_pos,
+                ));
+            }
+
+            commands.entity(entity).despawn_recursive();
+        }
+    }
 }

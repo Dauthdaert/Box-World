@@ -2,7 +2,7 @@ use block_mesh::ndshape::{ConstShape, ConstShape3u32};
 
 use crate::voxel::Voxel;
 
-const CHUNK_EDGE: u32 = 16;
+pub const CHUNK_EDGE: u32 = 16;
 pub type ChunkShape = ConstShape3u32<CHUNK_EDGE, CHUNK_EDGE, CHUNK_EDGE>;
 
 const BOUNDARY_EDGE: u32 = CHUNK_EDGE + 2;

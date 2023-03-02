@@ -912,6 +912,7 @@ dependencies = [
  "bevy_flycam",
  "bevy_kira_audio",
  "block-mesh",
+ "futures-lite",
  "image 0.24.5",
  "winit",
 ]
