@@ -105,15 +105,17 @@ fn load_around_camera(
 
     let unloaded = world.unload_outside_range(camera_chunk_pos, VIEW_DISTANCE);
     // TODO: Requires heavy optimisation. Should have a pos to entity index in world.
-    for (chunk, pos) in chunk_query.iter() {
-        if unloaded.contains(pos) {
-            commands.entity(chunk).despawn_recursive();
+    if !unloaded.is_empty() {
+        for (chunk, pos) in chunk_query.iter() {
+            if unloaded.contains(pos) {
+                commands.entity(chunk).despawn_recursive();
+            }
         }
     }
 
     let thread_pool = AsyncComputeTaskPool::get();
     let loaded = world.load_inside_range(camera_chunk_pos, VIEW_DISTANCE);
-    for chunk_pos_chunk in loaded.chunks(8) {
+    for chunk_pos_chunk in loaded.chunks(4) {
         let mut boundaries = Vec::new();
         for chunk_pos in chunk_pos_chunk.iter() {
             if let Some(boundary) = world.get_chunk_boundary(*chunk_pos) {
@@ -122,8 +124,8 @@ fn load_around_camera(
         }
         let task = thread_pool.spawn(async move {
             boundaries
-                .iter()
-                .map(|(chunk_pos, boundary)| (*chunk_pos, generate_mesh(boundary)))
+                .into_iter()
+                .map(|(chunk_pos, boundary)| (chunk_pos, generate_mesh(&boundary)))
                 .collect()
         });
         commands.spawn(ComputeMesh(task));
@@ -135,7 +137,7 @@ fn handle_meshes(
     mut meshes: ResMut<Assets<Mesh>>,
     mut mesh_tasks: Query<(Entity, &mut ComputeMesh)>,
 ) {
-    for (entity, mut task) in mesh_tasks.iter_mut() {
+    for (entity, mut task) in mesh_tasks.iter_mut().take(8) {
         if let Some(chunks) = future::block_on(future::poll_once(&mut task.0)) {
             for (chunk_pos, mesh) in chunks {
                 let chunk_world_pos = chunk_pos.to_world();
