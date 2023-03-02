@@ -1,0 +1,39 @@
+[package]
+name = "box_world"
+version = "0.1.0"
+edition = "2021"
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[profile.release]
+panic = 'abort'
+codegen-units = 1
+opt-level = 3
+lto = true
+
+[features]
+default = [
+  "bevy/bevy_winit",
+  "bevy/bevy_render",
+  "bevy/bevy_core_pipeline",
+  "bevy/bevy_pbr",
+  "bevy/bevy_sprite",
+  "bevy/bevy_text",
+  "bevy/bevy_ui",
+  "bevy/bevy_asset",
+  "bevy/png",
+  "bevy/x11",
+  "bevy/wayland",
+  "bevy/filesystem_watcher",
+  "bevy_kira_audio/wav"
+]
+
+[dependencies]
+winit = "0.27.5"
+image = "0.24.5"
+bevy = { version = "0.9", default-features = false }
+bevy_kira_audio = { version = "0.13", default-features = false }
+bevy_flycam = "0.9.0"
+bevy-inspector-egui = "0.15"
+block-mesh = { git = "https://github.com/bonsairobo/block-mesh-rs.git" }
