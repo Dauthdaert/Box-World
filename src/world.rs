@@ -1,5 +1,5 @@
 use bevy::{
-    prelude::{Component, Resource},
+    prelude::{Component, Resource, Vec3},
     utils::HashMap,
 };
 
@@ -45,6 +45,14 @@ impl ChunkPos {
             ChunkPos::new(self.x, self.y, self.z + 1),
             ChunkPos::new(self.x, self.y, self.z.wrapping_sub(1)),
         ]
+    }
+
+    pub fn distance(&self, other: &ChunkPos) -> f32 {
+        Vec3::new(self.x as f32, self.y as f32, self.y as f32).distance(Vec3::new(
+            other.x as f32,
+            other.y as f32,
+            other.z as f32,
+        ))
     }
 }
 
@@ -92,6 +100,11 @@ impl World {
                         pos.y + y - distance,
                         pos.z + z - distance,
                     );
+
+                    if pos.distance(&other_pos) > distance as f32 {
+                        continue;
+                    }
+
                     if !self.chunks.contains_key(&other_pos) {
                         to_load.push(other_pos);
                     }
@@ -110,10 +123,7 @@ impl World {
     pub fn unload_outside_range(&mut self, pos: ChunkPos, distance: u32) -> Vec<ChunkPos> {
         let mut to_remove = Vec::new();
         self.chunks.keys().for_each(|other_pos| {
-            if pos.x.abs_diff(other_pos.x) > distance
-                || pos.y.abs_diff(other_pos.y) > distance
-                || pos.z.abs_diff(other_pos.z) > distance
-            {
+            if pos.distance(other_pos) > distance as f32 {
                 to_remove.push(*other_pos);
             }
         });

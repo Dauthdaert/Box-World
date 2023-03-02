@@ -1,4 +1,4 @@
-pub const VOXEL_SIZE: f32 = 1.0;
+pub const VOXEL_SIZE: f32 = 4.0;
 
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]

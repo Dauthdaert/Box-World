@@ -94,7 +94,7 @@ fn load_around_camera(
     camera_query: Query<&Transform, With<FlyCam>>,
     chunk_query: Query<(Entity, &ChunkPos)>,
 ) {
-    const VIEW_DISTANCE: u32 = 16;
+    const VIEW_DISTANCE: u32 = 12;
 
     let camera_translation = camera_query.single().translation;
     let camera_chunk_pos = ChunkPos::from_world(
