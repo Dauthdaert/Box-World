@@ -60,10 +60,16 @@ impl Storage {
     pub fn new(size: usize) -> Self {
         let indices_length = 1;
         let initial_capacity = 2_usize.pow(indices_length as u32);
+        let mut palette = Vec::with_capacity(initial_capacity);
+        palette.push(PaletteEntry {
+            voxel_type: Voxel::Empty,
+            ref_count: size as u32,
+        });
+
         Self {
             size,
             data: BitBuffer::new(size * indices_length),
-            palette: Vec::with_capacity(initial_capacity),
+            palette,
             palette_capacity: initial_capacity,
             indices_length,
         }
@@ -109,6 +115,7 @@ impl Storage {
         }
 
         // Create new palette entry
+        bevy::prelude::info!("Creating new voxel entry for {:?}", voxel);
         let new_entry_idx = if let Some((i, entry)) = self
             .palette
             .iter_mut()
@@ -145,12 +152,10 @@ impl Storage {
             .data
             .get(idx * self.indices_length, self.indices_length);
 
-        if let Some(entry) = self.palette.get(palette_idx) {
-            entry.voxel_type
-        } else {
-            // If the cube is empty, return default Voxel
-            Voxel::default()
-        }
+        self.palette
+            .get(palette_idx)
+            .expect("Failed to get palette entry in voxel get")
+            .voxel_type
     }
 
     fn grow_palette(&mut self) {
@@ -173,7 +178,7 @@ impl Storage {
     }
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct PaletteEntry {
     voxel_type: Voxel,
     ref_count: u32,
