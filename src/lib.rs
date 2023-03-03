@@ -6,7 +6,7 @@ use bevy::{
     tasks::{AsyncComputeTaskPool, Task},
 };
 use bevy_flycam::{FlyCam, NoCameraPlayerPlugin};
-use bevy_inspector_egui::*;
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use futures_lite::future;
 
 use mesher::generate_mesh;
@@ -25,18 +25,14 @@ pub fn app() -> App {
 
     #[cfg(debug_assertions)]
     {
-        app.insert_resource(WorldInspectorParams {
-            enabled: true,
-            ..default()
-        })
-        .add_plugin(WorldInspectorPlugin::new())
-        .add_plugin(FrameTimeDiagnosticsPlugin::default())
-        .add_plugin(LogDiagnosticsPlugin::default())
-        .insert_resource(WgpuSettings {
-            features: WgpuFeatures::POLYGON_MODE_LINE,
-            ..default()
-        })
-        .add_plugin(WireframePlugin);
+        app.add_plugin(WorldInspectorPlugin)
+            .add_plugin(FrameTimeDiagnosticsPlugin::default())
+            .add_plugin(LogDiagnosticsPlugin::default())
+            .insert_resource(WgpuSettings {
+                features: WgpuFeatures::POLYGON_MODE_LINE,
+                ..default()
+            })
+            .add_plugin(WireframePlugin);
     }
 
     app.add_startup_system(setup);
