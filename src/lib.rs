@@ -1,4 +1,5 @@
 use bevy::{
+    diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
     pbr::wireframe::{Wireframe, WireframeConfig, WireframePlugin},
     prelude::*,
     render::settings::{WgpuFeatures, WgpuSettings},
@@ -29,6 +30,8 @@ pub fn app() -> App {
             ..default()
         })
         .add_plugin(WorldInspectorPlugin::new())
+        .add_plugin(FrameTimeDiagnosticsPlugin::default())
+        .add_plugin(LogDiagnosticsPlugin::default())
         .insert_resource(WgpuSettings {
             features: WgpuFeatures::POLYGON_MODE_LINE,
             ..default()
