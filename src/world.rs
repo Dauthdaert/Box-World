@@ -1,61 +1,11 @@
-use bevy::{
-    prelude::{Component, Resource, Vec3},
-    utils::HashMap,
+use bevy::{prelude::Resource, utils::HashMap
 };
 
 use crate::{
-    chunk::{Chunk, CHUNK_EDGE},
+    chunk::{Chunk, ChunkPos},
     mesher::ChunkBoundary,
-    voxel::{Voxel, VOXEL_SIZE},
+    voxel::Voxel,
 };
-
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub struct ChunkPos {
-    pub x: u32,
-    pub y: u32,
-    pub z: u32,
-}
-
-impl ChunkPos {
-    pub fn new(x: u32, y: u32, z: u32) -> Self {
-        Self { x, y, z }
-    }
-
-    pub fn from_world(x: f32, y: f32, z: f32) -> Self {
-        Self {
-            x: (x / (VOXEL_SIZE * CHUNK_EDGE as f32)) as u32,
-            y: (y / (VOXEL_SIZE * CHUNK_EDGE as f32)) as u32,
-            z: (z / (VOXEL_SIZE * CHUNK_EDGE as f32)) as u32,
-        }
-    }
-
-    pub fn to_world(self) -> (f32, f32, f32) {
-        (
-            (self.x * CHUNK_EDGE) as f32 * VOXEL_SIZE,
-            (self.y * CHUNK_EDGE) as f32 * VOXEL_SIZE,
-            (self.z * CHUNK_EDGE) as f32 * VOXEL_SIZE,
-        )
-    }
-
-    pub fn neighbors(&self) -> [ChunkPos; 6] {
-        [
-            ChunkPos::new(self.x + 1, self.y, self.z),
-            ChunkPos::new(self.x.wrapping_sub(1), self.y, self.z),
-            ChunkPos::new(self.x, self.y + 1, self.z),
-            ChunkPos::new(self.x, self.y.wrapping_sub(1), self.z),
-            ChunkPos::new(self.x, self.y, self.z + 1),
-            ChunkPos::new(self.x, self.y, self.z.wrapping_sub(1)),
-        ]
-    }
-
-    pub fn distance(&self, other: &ChunkPos) -> f32 {
-        Vec3::new(self.x as f32, self.y as f32, self.y as f32).distance(Vec3::new(
-            other.x as f32,
-            other.y as f32,
-            other.z as f32,
-        ))
-    }
-}
 
 #[derive(Resource)]
 pub struct World {

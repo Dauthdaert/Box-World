@@ -1,4 +1,7 @@
-pub const VOXEL_SIZE: f32 = 4.0;
+const VOXEL_SIZE: f32 = 4.0;
+
+mod position;
+pub use position::VoxelPos;
 
 #[allow(dead_code)]
 #[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
@@ -29,5 +32,11 @@ impl block_mesh::MergeVoxel for Voxel {
 
     fn merge_value_facing_neighbour(&self) -> Self::MergeValueFacingNeighbour {
         *self
+    }
+}
+
+impl Voxel {
+    pub const fn size() -> f32 {
+        VOXEL_SIZE
     }
 }

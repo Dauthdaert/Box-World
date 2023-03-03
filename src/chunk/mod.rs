@@ -4,10 +4,13 @@ use crate::voxel::Voxel;
 
 use storage::Storage;
 
+mod position;
 mod storage;
 
-pub const CHUNK_EDGE: u32 = 16;
-pub type ChunkShape = ConstShape3u32<CHUNK_EDGE, CHUNK_EDGE, CHUNK_EDGE>;
+pub use position::ChunkPos;
+
+const CHUNK_EDGE: u32 = 16;
+type ChunkShape = ConstShape3u32<CHUNK_EDGE, CHUNK_EDGE, CHUNK_EDGE>;
 
 #[derive(Clone)]
 pub struct Chunk {
@@ -40,8 +43,12 @@ impl Chunk {
         }
     }
 
-    pub fn size() -> u32 {
+    pub const fn size() -> u32 {
         ChunkShape::SIZE
+    }
+
+    pub const fn edge() -> u32 {
+        CHUNK_EDGE
     }
 
     pub fn linearize(x: u32, y: u32, z: u32) -> usize {

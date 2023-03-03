@@ -7,10 +7,10 @@ use bevy::{
 };
 use bevy_flycam::{FlyCam, NoCameraPlayerPlugin};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
+use chunk::ChunkPos;
 use futures_lite::future;
 
 use mesher::generate_mesh;
-use world::ChunkPos;
 
 mod chunk;
 mod mesher;
@@ -96,7 +96,7 @@ fn load_around_camera(
     const VIEW_DISTANCE: u32 = 12;
 
     let camera_translation = camera_query.single().translation;
-    let camera_chunk_pos = ChunkPos::from_world(
+    let camera_chunk_pos = ChunkPos::from_global_coords(
         camera_translation.x,
         camera_translation.y,
         camera_translation.z,
@@ -139,7 +139,7 @@ fn handle_meshes(
     for (entity, mut task) in mesh_tasks.iter_mut().take(8) {
         if let Some(chunks) = future::block_on(future::poll_once(&mut task.0)) {
             for (chunk_pos, mesh) in chunks {
-                let chunk_world_pos = chunk_pos.to_world();
+                let chunk_world_pos = chunk_pos.to_global_coords();
                 commands.spawn((
                     PbrBundle {
                         mesh: meshes.add(mesh),

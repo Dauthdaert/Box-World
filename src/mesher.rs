@@ -8,14 +8,11 @@ use block_mesh::{
     GreedyQuadsBuffer, RIGHT_HANDED_Y_UP_CONFIG,
 };
 
-use crate::{
-    chunk::{Chunk, CHUNK_EDGE},
-    voxel::{Voxel, VOXEL_SIZE},
-};
+use crate::{chunk::Chunk, voxel::Voxel};
 
 const UV_SCALE: f32 = 1.0 / 16.0;
 
-const BOUNDARY_EDGE: u32 = CHUNK_EDGE + 2;
+const BOUNDARY_EDGE: u32 = Chunk::edge() + 2;
 pub type BoundaryShape = ConstShape3u32<BOUNDARY_EDGE, BOUNDARY_EDGE, BOUNDARY_EDGE>;
 
 pub struct ChunkBoundary {
@@ -25,7 +22,7 @@ pub struct ChunkBoundary {
 #[allow(dead_code)]
 impl ChunkBoundary {
     pub fn new(center: Chunk, neighbors: [Chunk; 6]) -> Self {
-        const MAX: u32 = CHUNK_EDGE;
+        const MAX: u32 = Chunk::edge();
         const BOUND: u32 = MAX + 1;
 
         let voxels: Box<[Voxel]> = (0..BoundaryShape::SIZE)
@@ -50,7 +47,7 @@ impl ChunkBoundary {
         &self.voxels
     }
 
-    pub fn size() -> u32 {
+    pub const fn size() -> u32 {
         BoundaryShape::SIZE
     }
 
@@ -76,7 +73,7 @@ pub fn generate_mesh_with_buffer(chunk: &ChunkBoundary, buffer: &mut GreedyQuads
         chunk.voxels(),
         &BoundaryShape {},
         [0; 3],
-        [CHUNK_EDGE + 1; 3],
+        [Chunk::edge() + 1; 3],
         &faces,
         buffer,
     );
@@ -91,7 +88,7 @@ pub fn generate_mesh_with_buffer(chunk: &ChunkBoundary, buffer: &mut GreedyQuads
     for (group, face) in buffer.quads.groups.iter().zip(faces.into_iter()) {
         for quad in group.iter() {
             indices.extend_from_slice(&face.quad_mesh_indices(positions.len() as u32));
-            positions.extend_from_slice(&face.quad_mesh_positions(quad, VOXEL_SIZE));
+            positions.extend_from_slice(&face.quad_mesh_positions(quad, Voxel::size()));
             normals.extend_from_slice(&face.quad_mesh_normals());
             tex_coords.extend_from_slice(&face.tex_coords(
                 RIGHT_HANDED_Y_UP_CONFIG.u_flip_face,
