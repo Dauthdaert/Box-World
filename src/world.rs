@@ -4,7 +4,8 @@ use bevy::{
 };
 
 use crate::{
-    chunk::{Chunk, ChunkBoundary, CHUNK_EDGE},
+    chunk::{Chunk, CHUNK_EDGE},
+    mesher::ChunkBoundary,
     voxel::{Voxel, VOXEL_SIZE},
 };
 
@@ -72,7 +73,7 @@ impl World {
         let mut chunk = Chunk::default();
 
         for i in 0..Chunk::size() {
-            let (x, y, _z) = Chunk::delinearize(i);
+            let (x, y, z) = Chunk::delinearize(i);
 
             let voxel = if ((y * x) as f32).sqrt() < 1.0 {
                 Voxel::Opaque(1)
@@ -80,7 +81,7 @@ impl World {
                 Voxel::Empty
             };
 
-            chunk.voxels[i as usize] = voxel;
+            chunk.set(x, y, z, voxel);
         }
 
         self.chunks.insert(pos, chunk);
