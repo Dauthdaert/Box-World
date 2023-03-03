@@ -1,37 +1,58 @@
-use bevy::{prelude::Resource, utils::HashMap
+use bevy::{prelude::Resource, utils::HashMap};
+use noise::{
+    utils::{NoiseMap, NoiseMapBuilder, PlaneMapBuilder},
+    Fbm, Perlin,
 };
 
 use crate::{
     chunk::{Chunk, ChunkPos},
     mesher::ChunkBoundary,
-    voxel::Voxel,
+    voxel::{Voxel, VoxelPos},
 };
 
 #[derive(Resource)]
 pub struct World {
     chunks: HashMap<ChunkPos, Chunk>,
+    generator: NoiseMap,
 }
 
 impl World {
     pub fn new() -> Self {
+        let fbm = Fbm::<Perlin>::default();
+        let noise = PlaneMapBuilder::<_, 2>::new(fbm)
+            .set_is_seamless(true)
+            .set_size(1000, 1000)
+            .set_x_bounds(-5.0, 5.0)
+            .set_y_bounds(-5.0, 5.0)
+            .build();
         Self {
             chunks: HashMap::new(),
+            generator: noise,
         }
     }
 
     pub fn load(&mut self, pos: ChunkPos) {
         let mut chunk = Chunk::default();
 
-        for i in 0..Chunk::size() {
-            let (x, y, z) = Chunk::delinearize(i);
+        for z in 0..Chunk::edge() {
+            for y in 0..Chunk::edge() {
+                for x in 0..Chunk::edge() {
+                    let voxel_pos = VoxelPos::from_chunk_coords(pos, x, y, z);
+                    let voxel = if (voxel_pos.y as f64)
+                        < (40.0
+                            + self
+                                .generator
+                                .get_value(voxel_pos.x as usize, voxel_pos.z as usize)
+                                * 10.0)
+                    {
+                        Voxel::Opaque(1)
+                    } else {
+                        Voxel::Empty
+                    };
 
-            let voxel = if ((y * x) as f32).sqrt() < 1.0 {
-                Voxel::Opaque(1)
-            } else {
-                Voxel::Empty
-            };
-
-            chunk.set(x, y, z, voxel);
+                    chunk.set(x, y, z, voxel);
+                }
+            }
         }
 
         self.chunks.insert(pos, chunk);

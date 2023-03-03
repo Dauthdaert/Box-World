@@ -1,11 +1,11 @@
 use bevy::{
     diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
-    pbr::wireframe::{Wireframe, WireframeConfig, WireframePlugin},
+    pbr::wireframe::{WireframeConfig, WireframePlugin},
     prelude::*,
     render::settings::{WgpuFeatures, WgpuSettings},
     tasks::{AsyncComputeTaskPool, Task},
 };
-use bevy_flycam::{FlyCam, NoCameraPlayerPlugin};
+use bevy_flycam::{FlyCam, MovementSettings, NoCameraPlayerPlugin};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use chunk::ChunkPos;
 use futures_lite::future;
@@ -33,6 +33,9 @@ pub fn app() -> App {
                 ..default()
             })
             .add_plugin(WireframePlugin);
+
+        // Wireframe default to off
+        app.add_system(toggle_wireframe);
     }
 
     app.add_startup_system(setup);
@@ -42,17 +45,7 @@ pub fn app() -> App {
     app
 }
 
-#[derive(Component)]
-struct Shape;
-
-fn setup(
-    mut commands: Commands,
-    mut wireframe_config: ResMut<WireframeConfig>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
-    wireframe_config.global = false;
-
+fn setup(mut commands: Commands) {
     let world = world::World::new();
     commands.insert_resource(world);
 
@@ -67,13 +60,11 @@ fn setup(
         ..default()
     });
 
-    // ground plane
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(shape::Plane { size: 50. }.into()),
-        material: materials.add(Color::SILVER.into()),
+    // Setup flying camera
+    commands.insert_resource(MovementSettings {
+        speed: 30.0,
         ..default()
     });
-
     commands.spawn((
         Camera3dBundle {
             transform: Transform::from_xyz(0.0, 6., 12.0)
@@ -150,13 +141,17 @@ fn handle_meshes(
                         ),
                         ..default()
                     },
-                    Shape,
-                    Wireframe,
                     chunk_pos,
                 ));
             }
 
             commands.entity(entity).despawn_recursive();
         }
+    }
+}
+
+fn toggle_wireframe(mut wireframe_config: ResMut<WireframeConfig>, kb_input: Res<Input<KeyCode>>) {
+    if kb_input.just_pressed(KeyCode::F1) {
+        wireframe_config.global = !wireframe_config.global;
     }
 }
