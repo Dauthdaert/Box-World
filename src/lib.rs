@@ -49,17 +49,6 @@ fn setup(mut commands: Commands) {
     let world = world::World::new();
     commands.insert_resource(world);
 
-    commands.spawn(PointLightBundle {
-        point_light: PointLight {
-            intensity: 9000.0,
-            range: 100.,
-            shadows_enabled: true,
-            ..default()
-        },
-        transform: Transform::from_xyz(8.0, 16.0, 8.0),
-        ..default()
-    });
-
     // Setup flying camera
     commands.insert_resource(MovementSettings {
         speed: 30.0,
