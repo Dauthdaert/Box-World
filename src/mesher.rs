@@ -84,10 +84,11 @@ pub fn generate_mesh_with_buffer(chunk: &ChunkBoundary, buffer: &mut GreedyQuads
     let mut positions = Vec::with_capacity(num_vertices);
     let mut normals = Vec::with_capacity(num_vertices);
     let mut tex_coords = Vec::with_capacity(num_vertices);
+    let mut ao = Vec::with_capacity(num_vertices);
 
     for (group, face) in buffer.quads.groups.iter().zip(faces.into_iter()) {
         for quad in group.iter() {
-            indices.extend_from_slice(&face.quad_mesh_indices(positions.len() as u32));
+            indices.extend_from_slice(&face.quad_mesh_indices(quad, positions.len() as u32));
             positions.extend_from_slice(&face.quad_mesh_positions(quad, Voxel::size()));
             normals.extend_from_slice(&face.quad_mesh_normals());
             tex_coords.extend_from_slice(&face.tex_coords(
@@ -95,6 +96,7 @@ pub fn generate_mesh_with_buffer(chunk: &ChunkBoundary, buffer: &mut GreedyQuads
                 true,
                 quad,
             ));
+            ao.extend_from_slice(&quad.ao);
         }
     }
 
@@ -107,7 +109,19 @@ pub fn generate_mesh_with_buffer(chunk: &ChunkBoundary, buffer: &mut GreedyQuads
     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
     mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
     mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, tex_coords);
+    mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, convert_ao(&ao));
     mesh.set_indices(Some(Indices::U32(indices)));
 
     mesh
+}
+
+fn convert_ao(ao: &[u8]) -> Vec<[f32; 4]> {
+    ao.iter()
+        .map(|val| match val {
+            0 => [0.1, 0.1, 0.1, 1.0],
+            1 => [0.25, 0.25, 0.25, 1.0],
+            2 => [0.5, 0.5, 0.5, 1.0],
+            _ => [1.0, 1.0, 1.0, 1.0],
+        })
+        .collect()
 }
