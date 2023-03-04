@@ -508,9 +508,9 @@ dependencies = [
 
 [[package]]
 name = "bevy_kira_audio"
-version = "0.13.0"
+version = "0.14.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b310ffe1c870e6ca5f0db228953f68af5a861302ec759edae43450f5835a0ece"
+checksum = "74c2405d5ab2246ff022bdd9a197be48db5ca6457cfeb1c5a6ac3785f337ef8d"
 dependencies = [
  "anyhow",
  "bevy",
