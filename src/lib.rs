@@ -7,10 +7,10 @@ use bevy::{
 };
 use bevy_flycam::{FlyCam, MovementSettings, NoCameraPlayerPlugin};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use chunk::ChunkPos;
+use chunk::{ChunkData, ChunkPos};
 use futures_lite::future;
 
-use mesher::generate_mesh;
+use mesher::{generate_mesh, ChunkBoundary};
 
 mod chunk;
 mod mesher;
@@ -40,7 +40,9 @@ pub fn app() -> App {
 
     app.add_startup_system(setup);
 
-    app.add_system(load_around_camera).add_system(handle_meshes);
+    app.add_system(load_around_camera)
+        .add_system(enqueue_meshes)
+        .add_system(handle_meshes);
 
     app
 }
@@ -65,13 +67,13 @@ fn setup(mut commands: Commands) {
 }
 
 #[derive(Component)]
-struct ComputeMesh(Task<Vec<(ChunkPos, Mesh)>>);
+pub struct NeedsMesh;
 
 fn load_around_camera(
     mut commands: Commands,
     mut world: ResMut<world::World>,
     camera_query: Query<&Transform, With<FlyCam>>,
-    chunk_query: Query<(Entity, &ChunkPos)>,
+    chunk_query: Query<&ChunkPos>,
 ) {
     const VIEW_DISTANCE: u32 = 12;
 
@@ -83,31 +85,58 @@ fn load_around_camera(
     );
 
     let unloaded = world.unload_outside_range(camera_chunk_pos, VIEW_DISTANCE);
-    // TODO: Requires heavy optimisation. Should have a pos to entity index in world.
-    if !unloaded.is_empty() {
-        for (chunk, pos) in chunk_query.iter() {
-            if unloaded.contains(pos) {
-                commands.entity(chunk).despawn_recursive();
-            }
+    for entity in unloaded.iter() {
+        // Re-mesh all remaining neighbors after unloading a chunk
+        for neighbor in world
+            .get_chunk_neighbors(*chunk_query.get(*entity).unwrap())
+            .into_iter()
+            .flatten()
+            .filter(|neighbor| !unloaded.contains(neighbor))
+        {
+            commands.entity(neighbor).insert(NeedsMesh);
         }
+
+        commands.entity(*entity).despawn_recursive();
+    }
+
+    let loaded = world.load_inside_range(camera_chunk_pos, VIEW_DISTANCE);
+    for (pos, chunk) in loaded {
+        world.set(pos, commands.spawn((pos, chunk, NeedsMesh)).id());
+    }
+}
+
+#[derive(Component)]
+struct ComputeMesh(Task<(Entity, ChunkPos, Mesh)>);
+
+fn enqueue_meshes(
+    mut commands: Commands,
+    world: Res<world::World>,
+    needs_meshes: Query<(Entity, &ChunkPos, &ChunkData), With<NeedsMesh>>,
+    chunks: Query<&ChunkData>,
+) {
+    if needs_meshes.is_empty() {
+        return;
     }
 
     let thread_pool = AsyncComputeTaskPool::get();
-    let loaded = world.load_inside_range(camera_chunk_pos, VIEW_DISTANCE);
-    for chunk_pos_chunk in loaded.chunks(4) {
-        let mut boundaries = Vec::new();
-        for chunk_pos in chunk_pos_chunk.iter() {
-            if let Some(boundary) = world.get_chunk_boundary(*chunk_pos) {
-                boundaries.push((*chunk_pos, boundary));
+    for (entity, pos, data) in needs_meshes.iter() {
+        let neighbors = world.get_chunk_neighbors(*pos).map(|entity| {
+            if let Some(entity) = entity {
+                chunks.get(entity).unwrap().clone()
+            } else {
+                ChunkData::default()
             }
-        }
+        });
+
+        let boundary = ChunkBoundary::new(data.clone(), neighbors);
+        let pos = *pos;
         let task = thread_pool.spawn(async move {
-            boundaries
-                .into_iter()
-                .map(|(chunk_pos, boundary)| (chunk_pos, generate_mesh(&boundary)))
-                .collect()
+            let mesh = generate_mesh(boundary);
+            (entity, pos, mesh)
         });
         commands.spawn(ComputeMesh(task));
+
+        commands.entity(entity).remove::<NeedsMesh>();
     }
 }
 
@@ -116,12 +145,12 @@ fn handle_meshes(
     mut meshes: ResMut<Assets<Mesh>>,
     mut mesh_tasks: Query<(Entity, &mut ComputeMesh)>,
 ) {
-    for (entity, mut task) in mesh_tasks.iter_mut().take(8) {
-        if let Some(chunks) = future::block_on(future::poll_once(&mut task.0)) {
-            for (chunk_pos, mesh) in chunks {
-                let chunk_world_pos = chunk_pos.to_global_coords();
-                commands.spawn((
-                    PbrBundle {
+    for (task_entity, mut task) in mesh_tasks.iter_mut() {
+        if let Some((entity, pos, mesh)) = future::block_on(future::poll_once(&mut task.0)) {
+            let chunk_world_pos = pos.to_global_coords();
+            if mesh.count_vertices() > 0 {
+                if let Some(mut commands) = commands.get_entity(entity) {
+                    commands.insert(PbrBundle {
                         mesh: meshes.add(mesh),
                         transform: Transform::from_xyz(
                             chunk_world_pos.0,
@@ -129,12 +158,11 @@ fn handle_meshes(
                             chunk_world_pos.2,
                         ),
                         ..default()
-                    },
-                    chunk_pos,
-                ));
+                    });
+                }
             }
 
-            commands.entity(entity).despawn_recursive();
+            commands.entity(task_entity).despawn_recursive();
         }
     }
 }

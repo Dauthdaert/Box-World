@@ -2,7 +2,7 @@ use bevy::prelude::{Component, Vec3};
 
 use crate::voxel::{Voxel, VoxelPos};
 
-use super::Chunk;
+use super::ChunkData;
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct ChunkPos {
@@ -18,25 +18,25 @@ impl ChunkPos {
 
     pub fn from_global_coords(x: f32, y: f32, z: f32) -> Self {
         Self {
-            x: (x / (Voxel::size() * Chunk::edge() as f32)) as u32,
-            y: (y / (Voxel::size() * Chunk::edge() as f32)) as u32,
-            z: (z / (Voxel::size() * Chunk::edge() as f32)) as u32,
+            x: (x / (Voxel::size() * ChunkData::edge() as f32)) as u32,
+            y: (y / (Voxel::size() * ChunkData::edge() as f32)) as u32,
+            z: (z / (Voxel::size() * ChunkData::edge() as f32)) as u32,
         }
     }
 
     pub fn to_global_coords(self) -> (f32, f32, f32) {
         (
-            (self.x * Chunk::edge()) as f32 * Voxel::size(),
-            (self.y * Chunk::edge()) as f32 * Voxel::size(),
-            (self.z * Chunk::edge()) as f32 * Voxel::size(),
+            (self.x * ChunkData::edge()) as f32 * Voxel::size(),
+            (self.y * ChunkData::edge()) as f32 * Voxel::size(),
+            (self.z * ChunkData::edge()) as f32 * Voxel::size(),
         )
     }
 
     pub fn to_voxel_coords(self) -> VoxelPos {
         VoxelPos::new(
-            self.x * Chunk::edge(),
-            self.y * Chunk::edge(),
-            self.z * Chunk::edge(),
+            self.x * ChunkData::edge(),
+            self.y * ChunkData::edge(),
+            self.z * ChunkData::edge(),
         )
     }
 
@@ -52,7 +52,7 @@ impl ChunkPos {
     }
 
     pub fn distance(&self, other: &ChunkPos) -> f32 {
-        Vec3::new(self.x as f32, self.y as f32, self.y as f32).distance(Vec3::new(
+        Vec3::new(self.x as f32, self.y as f32, self.z as f32).distance(Vec3::new(
             other.x as f32,
             other.y as f32,
             other.z as f32,

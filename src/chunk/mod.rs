@@ -1,3 +1,4 @@
+use bevy::prelude::Component;
 use block_mesh::ndshape::{ConstShape, ConstShape3u32};
 
 use crate::voxel::Voxel;
@@ -12,13 +13,13 @@ pub use position::ChunkPos;
 const CHUNK_EDGE: u32 = 16;
 type ChunkShape = ConstShape3u32<CHUNK_EDGE, CHUNK_EDGE, CHUNK_EDGE>;
 
-#[derive(Clone)]
-pub struct Chunk {
+#[derive(Component, Clone)]
+pub struct ChunkData {
     voxels: Storage,
     change_count: u16,
 }
 
-impl Default for Chunk {
+impl Default for ChunkData {
     fn default() -> Self {
         Self {
             voxels: Storage::new(ChunkShape::USIZE),
@@ -28,7 +29,7 @@ impl Default for Chunk {
 }
 
 #[allow(dead_code)]
-impl Chunk {
+impl ChunkData {
     pub fn get(&self, x: u32, y: u32, z: u32) -> Voxel {
         self.voxels.get(Self::linearize(x, y, z))
     }

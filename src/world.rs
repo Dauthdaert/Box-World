@@ -1,18 +1,20 @@
-use bevy::{prelude::Resource, utils::HashMap};
+use bevy::{
+    prelude::{Entity, Resource},
+    utils::HashMap,
+};
 use noise::{
     utils::{NoiseMap, NoiseMapBuilder, PlaneMapBuilder},
     Fbm, Perlin,
 };
 
 use crate::{
-    chunk::{Chunk, ChunkPos},
-    mesher::ChunkBoundary,
+    chunk::{ChunkData, ChunkPos},
     voxel::{Voxel, VoxelPos},
 };
 
 #[derive(Resource)]
 pub struct World {
-    chunks: HashMap<ChunkPos, Chunk>,
+    chunks: HashMap<ChunkPos, Entity>,
     generator: NoiseMap,
 }
 
@@ -31,12 +33,16 @@ impl World {
         }
     }
 
-    pub fn load(&mut self, pos: ChunkPos) {
-        let mut chunk = Chunk::default();
+    pub fn set(&mut self, pos: ChunkPos, entity: Entity) {
+        self.chunks.insert(pos, entity);
+    }
 
-        for z in 0..Chunk::edge() {
-            for y in 0..Chunk::edge() {
-                for x in 0..Chunk::edge() {
+    pub fn load(&mut self, pos: ChunkPos) -> ChunkData {
+        let mut chunk = ChunkData::default();
+
+        for z in 0..ChunkData::edge() {
+            for y in 0..ChunkData::edge() {
+                for x in 0..ChunkData::edge() {
                     let voxel_pos = VoxelPos::from_chunk_coords(pos, x, y, z);
                     let voxel = if (voxel_pos.y as f64)
                         < (40.0
@@ -55,14 +61,18 @@ impl World {
             }
         }
 
-        self.chunks.insert(pos, chunk);
+        chunk
     }
 
-    pub fn load_inside_range(&mut self, pos: ChunkPos, distance: u32) -> Vec<ChunkPos> {
+    pub fn load_inside_range(
+        &mut self,
+        pos: ChunkPos,
+        distance: u32,
+    ) -> Vec<(ChunkPos, ChunkData)> {
         let mut to_load = Vec::new();
-        for x in 0..=distance * 2 {
+        for z in 0..=distance * 2 {
             for y in 0..=distance * 2 {
-                for z in 0..=distance * 2 {
+                for x in 0..=distance * 2 {
                     if pos.x + x < distance || pos.y + y < distance || pos.z + z < distance {
                         continue;
                     }
@@ -73,26 +83,27 @@ impl World {
                         pos.z + z - distance,
                     );
 
-                    if pos.distance(&other_pos) > distance as f32 {
-                        continue;
-                    }
-
-                    if !self.chunks.contains_key(&other_pos) {
+                    let chunk_distance = pos.distance(&other_pos);
+                    if chunk_distance < distance as f32 && !self.chunks.contains_key(&other_pos) {
                         to_load.push(other_pos);
                     }
                 }
             }
         }
 
-        to_load.iter().for_each(|pos| self.load(*pos));
         to_load
+            .into_iter()
+            .map(|pos| (pos, self.load(pos)))
+            .collect()
     }
 
-    pub fn unload(&mut self, pos: ChunkPos) {
-        self.chunks.remove(&pos);
+    pub fn unload(&mut self, pos: ChunkPos) -> Entity {
+        self.chunks
+            .remove(&pos)
+            .expect("Chunk should exist at ChunkPos for unloading")
     }
 
-    pub fn unload_outside_range(&mut self, pos: ChunkPos, distance: u32) -> Vec<ChunkPos> {
+    pub fn unload_outside_range(&mut self, pos: ChunkPos, distance: u32) -> Vec<Entity> {
         let mut to_remove = Vec::new();
         self.chunks.keys().for_each(|other_pos| {
             if pos.distance(other_pos) > distance as f32 {
@@ -100,22 +111,15 @@ impl World {
             }
         });
 
-        to_remove.iter().for_each(|pos| self.unload(*pos));
-        to_remove
+        to_remove.into_iter().map(|pos| self.unload(pos)).collect()
     }
 
     #[allow(dead_code)]
-    pub fn get_chunk(&self, pos: ChunkPos) -> Option<&Chunk> {
+    pub fn get_chunk(&self, pos: ChunkPos) -> Option<&Entity> {
         self.chunks.get(&pos)
     }
 
-    pub fn get_chunk_boundary(&self, pos: ChunkPos) -> Option<ChunkBoundary> {
-        self.chunks.get(&pos).map(|center| {
-            ChunkBoundary::new(
-                center.clone(),
-                pos.neighbors()
-                    .map(|pos| self.chunks.get(&pos).cloned().unwrap_or_default()),
-            )
-        })
+    pub fn get_chunk_neighbors(&self, pos: ChunkPos) -> [Option<Entity>; 6] {
+        pos.neighbors().map(|pos| self.chunks.get(&pos).copied())
     }
 }

@@ -8,11 +8,11 @@ use block_mesh::{
     GreedyQuadsBuffer, RIGHT_HANDED_Y_UP_CONFIG,
 };
 
-use crate::{chunk::Chunk, voxel::Voxel};
+use crate::{chunk::ChunkData, voxel::Voxel};
 
 const UV_SCALE: f32 = 1.0 / 16.0;
 
-const BOUNDARY_EDGE: u32 = Chunk::edge() + 2;
+const BOUNDARY_EDGE: u32 = ChunkData::edge() + 2;
 pub type BoundaryShape = ConstShape3u32<BOUNDARY_EDGE, BOUNDARY_EDGE, BOUNDARY_EDGE>;
 
 pub struct ChunkBoundary {
@@ -21,8 +21,8 @@ pub struct ChunkBoundary {
 
 #[allow(dead_code)]
 impl ChunkBoundary {
-    pub fn new(center: Chunk, neighbors: [Chunk; 6]) -> Self {
-        const MAX: u32 = Chunk::edge();
+    pub fn new(center: ChunkData, neighbors: [ChunkData; 6]) -> Self {
+        const MAX: u32 = ChunkData::edge();
         const BOUND: u32 = MAX + 1;
 
         let voxels: Box<[Voxel]> = (0..BoundaryShape::SIZE)
@@ -61,19 +61,19 @@ impl ChunkBoundary {
     }
 }
 
-pub fn generate_mesh(chunk: &ChunkBoundary) -> Mesh {
+pub fn generate_mesh(chunk: ChunkBoundary) -> Mesh {
     let mut buffer = GreedyQuadsBuffer::new(ChunkBoundary::size() as usize);
     generate_mesh_with_buffer(chunk, &mut buffer)
 }
 
-pub fn generate_mesh_with_buffer(chunk: &ChunkBoundary, buffer: &mut GreedyQuadsBuffer) -> Mesh {
+pub fn generate_mesh_with_buffer(chunk: ChunkBoundary, buffer: &mut GreedyQuadsBuffer) -> Mesh {
     let faces = RIGHT_HANDED_Y_UP_CONFIG.faces;
 
     greedy_quads(
         chunk.voxels(),
         &BoundaryShape {},
         [0; 3],
-        [Chunk::edge() + 1; 3],
+        [ChunkData::edge() + 1; 3],
         &faces,
         buffer,
     );
