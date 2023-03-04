@@ -45,7 +45,7 @@ impl World {
                 for x in 0..ChunkData::edge() {
                     let voxel_pos = VoxelPos::from_chunk_coords(pos, x, y, z);
                     let voxel = if (voxel_pos.y as f64)
-                        < (40.0
+                        < (100.0
                             + self
                                 .generator
                                 .get_value(voxel_pos.x as usize, voxel_pos.z as usize)
