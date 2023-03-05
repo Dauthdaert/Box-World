@@ -1,9 +1,36 @@
 use bevy::{
-    prelude::{Entity, Resource},
+    prelude::{Entity, Plugin, Query, Resource},
     utils::{HashMap, HashSet},
 };
+use rand::seq::IteratorRandom;
 
 use crate::chunk::{ChunkData, ChunkPos};
+
+mod generator;
+pub use generator::NeedsChunkData;
+
+pub struct WorldPlugin;
+
+impl Plugin for WorldPlugin {
+    fn build(&self, app: &mut bevy::prelude::App) {
+        app.insert_resource(World::new());
+
+        app.add_system(periodic_chunk_trim);
+
+        app.add_plugin(generator::GeneratorPlugin);
+    }
+}
+
+fn periodic_chunk_trim(mut chunks: Query<&mut ChunkData>) {
+    let mut rng = rand::thread_rng();
+    for mut data in chunks
+        .iter_mut()
+        .filter(|data| !data.is_uniform())
+        .choose_multiple(&mut rng, 2)
+    {
+        data.trim();
+    }
+}
 
 #[derive(Resource)]
 pub struct World {
@@ -21,7 +48,7 @@ impl World {
         self.chunks.insert(pos, entity);
     }
 
-    pub fn load(&mut self, _pos: ChunkPos) -> Option<ChunkData> {
+    fn load(&mut self, _pos: ChunkPos) -> Option<ChunkData> {
         // TODO: Load existing chunks from persistent storage
         None
     }
@@ -59,7 +86,7 @@ impl World {
             .collect()
     }
 
-    pub fn unload(&mut self, pos: ChunkPos) -> Entity {
+    fn unload(&mut self, pos: ChunkPos) -> Entity {
         self.chunks
             .remove(&pos)
             .expect("Chunk should exist at ChunkPos for unloading")
