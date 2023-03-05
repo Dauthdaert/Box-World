@@ -18,6 +18,7 @@ pub struct MesherPlugin;
 impl Plugin for MesherPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_system(enqueue_meshes)
+            .add_system(ease_meshes)
             .add_system(periodic_mesh_maintenance);
 
         app.add_system_to_stage(CoreStage::PostUpdate, handle_meshes);
@@ -97,21 +98,48 @@ fn handle_meshes(
             let chunk_world_pos = pos.to_global_coords();
             if let Some(mut commands) = commands.get_entity(entity) {
                 if mesh.indices().map_or(false, |indices| !indices.is_empty()) {
-                    commands.insert(PbrBundle {
-                        mesh: meshes.add(mesh),
-                        transform: Transform::from_xyz(
-                            chunk_world_pos.0,
-                            chunk_world_pos.1,
-                            chunk_world_pos.2,
-                        ),
-                        ..default()
-                    });
+                    commands.insert((
+                        PbrBundle {
+                            mesh: meshes.add(mesh),
+                            transform: Transform::from_xyz(
+                                chunk_world_pos.0,
+                                -100.,
+                                chunk_world_pos.2,
+                            ),
+                            ..default()
+                        },
+                        EaseToChunkPos,
+                    ));
                 } else {
-                    commands.remove::<PbrBundle>();
+                    commands.remove::<(PbrBundle, EaseToChunkPos)>();
                 }
             }
 
             commands.entity(task_entity).despawn_recursive();
+        }
+    }
+}
+
+#[derive(Component)]
+#[component(storage = "SparseSet")]
+struct EaseToChunkPos;
+
+#[allow(clippy::type_complexity)]
+fn ease_meshes(
+    timer: Res<Time>,
+    mut commands: Commands,
+    mut chunks: Query<
+        (Entity, &mut Transform, &ChunkPos),
+        (With<Handle<Mesh>>, With<EaseToChunkPos>),
+    >,
+) {
+    for (entity, mut transform, pos) in chunks.iter_mut() {
+        let dt = timer.delta_seconds();
+        let (_global_x, global_y, _global_z) = pos.to_global_coords();
+        transform.translation.y = global_y.min(transform.translation.y + 100. * dt);
+
+        if transform.translation.y == global_y {
+            commands.entity(entity).remove::<EaseToChunkPos>();
         }
     }
 }
