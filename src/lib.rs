@@ -63,13 +63,12 @@ fn setup(mut commands: Commands) {
 
     // Setup flying camera
     commands.insert_resource(MovementSettings {
-        speed: 30.0,
+        speed: 60.0,
         ..default()
     });
     commands.spawn((
         Camera3dBundle {
-            transform: Transform::from_xyz(1000.0, 1000., 1200.0)
-                .looking_at(Vec3::new(0., 1., 0.), Vec3::Y),
+            transform: Transform::from_xyz(10000., 400., 10000.).looking_at(Vec3::ZERO, Vec3::Y),
             ..default()
         },
         FlyCam,
