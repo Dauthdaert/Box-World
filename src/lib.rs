@@ -67,7 +67,8 @@ fn load_around_camera(
     mut world: ResMut<world::World>,
     camera_query: Query<&Transform, With<FlyCam>>,
 ) {
-    const VIEW_DISTANCE: u32 = 32;
+    const HORIZONTAL_VIEW_DISTANCE: u32 = 32;
+    const VERTICAL_VIEW_DISTANCE: u32 = 12;
 
     let camera_translation = camera_query.single().translation;
     let camera_chunk_pos = ChunkPos::from_global_coords(
@@ -76,12 +77,16 @@ fn load_around_camera(
         camera_translation.z,
     );
 
-    let unloaded = world.unload_outside_range(camera_chunk_pos, VIEW_DISTANCE);
+    let unloaded = world.unload_outside_range(camera_chunk_pos, HORIZONTAL_VIEW_DISTANCE);
     for entity in unloaded.iter() {
         commands.entity(*entity).despawn_recursive();
     }
 
-    let loaded = world.load_inside_range(camera_chunk_pos, VIEW_DISTANCE);
+    let loaded = world.load_inside_range(
+        camera_chunk_pos,
+        HORIZONTAL_VIEW_DISTANCE,
+        VERTICAL_VIEW_DISTANCE,
+    );
     for (pos, chunk) in loaded.into_iter() {
         let entity = if let Some(chunk) = chunk {
             commands.spawn((pos, chunk, NeedsMesh)).id()

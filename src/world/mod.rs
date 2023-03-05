@@ -56,24 +56,30 @@ impl World {
     pub fn load_inside_range(
         &mut self,
         pos: ChunkPos,
-        distance: u32,
+        horizontal_distance: u32,
+        vertical_distance: u32,
     ) -> Vec<(ChunkPos, Option<ChunkData>)> {
         let mut to_load = Vec::new();
-        for z in 0..=distance * 2 {
-            for y in 0..=distance * 2 {
-                for x in 0..=distance * 2 {
-                    if pos.x + x < distance || pos.y + y < distance || pos.z + z < distance {
+        for z in 0..=horizontal_distance * 2 {
+            for y in 0..=vertical_distance * 2 {
+                for x in 0..=horizontal_distance * 2 {
+                    if pos.x + x < horizontal_distance
+                        || pos.y + y < vertical_distance
+                        || pos.z + z < horizontal_distance
+                    {
                         continue;
                     }
 
                     let other_pos = ChunkPos::new(
-                        pos.x + x - distance,
-                        pos.y + y - distance,
-                        pos.z + z - distance,
+                        pos.x + x - horizontal_distance,
+                        pos.y + y - vertical_distance,
+                        pos.z + z - horizontal_distance,
                     );
 
                     let chunk_distance = pos.distance(&other_pos);
-                    if chunk_distance < distance as f32 && !self.chunks.contains_key(&other_pos) {
+                    if chunk_distance < horizontal_distance as f32
+                        && !self.chunks.contains_key(&other_pos)
+                    {
                         to_load.push(other_pos);
                     }
                 }
