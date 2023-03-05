@@ -44,6 +44,17 @@ impl ChunkData {
         }
     }
 
+    pub fn is_uniform(&self) -> bool {
+        match self.voxels {
+            Storage::Single(_) => true,
+            Storage::Multi(_) => false,
+        }
+    }
+
+    pub fn trim(&mut self) {
+        self.voxels.trim();
+    }
+
     pub const fn size() -> u32 {
         ChunkShape::SIZE
     }

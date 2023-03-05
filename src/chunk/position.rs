@@ -4,7 +4,7 @@ use crate::voxel::{Voxel, VoxelPos};
 
 use super::ChunkData;
 
-#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct ChunkPos {
     pub x: u32,
     pub y: u32,

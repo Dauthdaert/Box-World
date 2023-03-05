@@ -1,35 +1,19 @@
 use bevy::{
     prelude::{Entity, Resource},
-    utils::HashMap,
-};
-use noise::{
-    utils::{NoiseMap, NoiseMapBuilder, PlaneMapBuilder},
-    Fbm, Perlin,
+    utils::{HashMap, HashSet},
 };
 
-use crate::{
-    chunk::{ChunkData, ChunkPos},
-    voxel::{Voxel, VoxelPos},
-};
+use crate::chunk::{ChunkData, ChunkPos};
 
 #[derive(Resource)]
 pub struct World {
     chunks: HashMap<ChunkPos, Entity>,
-    generator: NoiseMap,
 }
 
 impl World {
     pub fn new() -> Self {
-        let fbm = Fbm::<Perlin>::default();
-        let noise = PlaneMapBuilder::<_, 2>::new(fbm)
-            .set_is_seamless(true)
-            .set_size(1000, 1000)
-            .set_x_bounds(-5.0, 5.0)
-            .set_y_bounds(-5.0, 5.0)
-            .build();
         Self {
             chunks: HashMap::new(),
-            generator: noise,
         }
     }
 
@@ -37,38 +21,16 @@ impl World {
         self.chunks.insert(pos, entity);
     }
 
-    pub fn load(&mut self, pos: ChunkPos) -> ChunkData {
-        let mut chunk = ChunkData::default();
-
-        for z in 0..ChunkData::edge() {
-            for y in 0..ChunkData::edge() {
-                for x in 0..ChunkData::edge() {
-                    let voxel_pos = VoxelPos::from_chunk_coords(pos, x, y, z);
-                    let voxel = if (voxel_pos.y as f64)
-                        < (100.0
-                            + self
-                                .generator
-                                .get_value(voxel_pos.x as usize, voxel_pos.z as usize)
-                                * 10.0)
-                    {
-                        Voxel::Opaque(1)
-                    } else {
-                        Voxel::Empty
-                    };
-
-                    chunk.set(x, y, z, voxel);
-                }
-            }
-        }
-
-        chunk
+    pub fn load(&mut self, _pos: ChunkPos) -> Option<ChunkData> {
+        // TODO: Load existing chunks from persistent storage
+        None
     }
 
     pub fn load_inside_range(
         &mut self,
         pos: ChunkPos,
         distance: u32,
-    ) -> Vec<(ChunkPos, ChunkData)> {
+    ) -> Vec<(ChunkPos, Option<ChunkData>)> {
         let mut to_load = Vec::new();
         for z in 0..=distance * 2 {
             for y in 0..=distance * 2 {
@@ -121,5 +83,20 @@ impl World {
 
     pub fn get_chunk_neighbors(&self, pos: ChunkPos) -> [Option<Entity>; 6] {
         pos.neighbors().map(|pos| self.chunks.get(&pos).copied())
+    }
+
+    pub fn get_unique_chunk_neighbors(&self, pos_list: Vec<ChunkPos>) -> Vec<Entity> {
+        let set: HashSet<Entity> = pos_list
+            .iter()
+            .flat_map(|pos| pos.neighbors())
+            .filter_map(|pos| {
+                let entity = self.chunks.get(&pos).copied();
+                if let Some(entity) = entity {
+                    return Some(entity);
+                }
+                None
+            })
+            .collect();
+        set.into_iter().collect()
     }
 }

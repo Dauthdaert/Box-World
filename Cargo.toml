@@ -43,3 +43,4 @@ block-mesh = { git = "https://github.com/Dauthdaert/block-mesh-rs.git" }
 futures-lite = "*"
 bitvec = "1.0.1"
 noise = { git = "https://github.com/Razaekel/noise-rs.git" }
+rand = "0.8.5"
