@@ -39,7 +39,7 @@ pub fn app() -> App {
             })
             .add_plugin(WireframePlugin);
 
-        // Wireframe default to off
+        // Wireframe defaults to off
         app.add_system(toggle_wireframe);
     }
 
