@@ -143,7 +143,7 @@ impl Storage {
                 }
 
                 // Create new palette entry
-                bevy::prelude::info!("Creating new voxel entry for {:?}", voxel);
+                //bevy::prelude::info!("Creating new voxel entry for {:?}", voxel);
                 let new_entry_idx = if let Some((i, entry)) = storage
                     .palette
                     .iter_mut()

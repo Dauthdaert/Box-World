@@ -6,7 +6,6 @@ use bevy::{
     tasks::{AsyncComputeTaskPool, Task},
 };
 use bevy_flycam::{FlyCam, MovementSettings, NoCameraPlayerPlugin};
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use chunk::{ChunkData, ChunkPos};
 use futures_lite::future;
 
@@ -25,8 +24,10 @@ pub fn app() -> App {
 
     #[cfg(debug_assertions)]
     {
-        app.add_plugin(WorldInspectorPlugin)
-            .add_plugin(FrameTimeDiagnosticsPlugin::default())
+        /*use bevy_inspector_egui::quick::WorldInspectorPlugin;
+        app.add_plugin(WorldInspectorPlugin);*/
+
+        app.add_plugin(FrameTimeDiagnosticsPlugin::default())
             .add_plugin(LogDiagnosticsPlugin::default())
             .insert_resource(WgpuSettings {
                 features: WgpuFeatures::POLYGON_MODE_LINE,
