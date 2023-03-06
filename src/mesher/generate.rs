@@ -2,7 +2,7 @@ use bevy::{
     prelude::Mesh,
     render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
-use block_mesh::{greedy_quads, GreedyQuadsBuffer, RIGHT_HANDED_Y_UP_CONFIG};
+use block_mesh::{visible_block_faces, UnitQuadBuffer, RIGHT_HANDED_Y_UP_CONFIG};
 
 use crate::{chunk::ChunkData, voxel::Voxel};
 
@@ -11,14 +11,14 @@ use super::chunk_boundary::{BoundaryShape, ChunkBoundary};
 const UV_SCALE: f32 = 1.0 / 16.0;
 
 pub fn generate_mesh(chunk: ChunkBoundary) -> Mesh {
-    let mut buffer = GreedyQuadsBuffer::new(ChunkBoundary::size() as usize);
+    let mut buffer = UnitQuadBuffer::new();
     generate_mesh_with_buffer(chunk, &mut buffer)
 }
 
-pub fn generate_mesh_with_buffer(chunk: ChunkBoundary, buffer: &mut GreedyQuadsBuffer) -> Mesh {
+pub fn generate_mesh_with_buffer(chunk: ChunkBoundary, buffer: &mut UnitQuadBuffer) -> Mesh {
     let faces = RIGHT_HANDED_Y_UP_CONFIG.faces;
 
-    greedy_quads(
+    visible_block_faces(
         chunk.voxels(),
         &BoundaryShape {},
         [0; 3],
@@ -26,8 +26,8 @@ pub fn generate_mesh_with_buffer(chunk: ChunkBoundary, buffer: &mut GreedyQuadsB
         &faces,
         buffer,
     );
-    let num_indices = buffer.quads.num_quads() * 6;
-    let num_vertices = buffer.quads.num_quads() * 4;
+    let num_indices = buffer.num_quads() * 6;
+    let num_vertices = buffer.num_quads() * 4;
 
     let mut indices = Vec::with_capacity(num_indices);
     let mut positions = Vec::with_capacity(num_vertices);
@@ -35,15 +35,17 @@ pub fn generate_mesh_with_buffer(chunk: ChunkBoundary, buffer: &mut GreedyQuadsB
     let mut tex_coords = Vec::with_capacity(num_vertices);
     let mut ao = Vec::with_capacity(num_vertices);
 
-    for (group, face) in buffer.quads.groups.iter().zip(faces.into_iter()) {
+    for (group, face) in buffer.groups.iter().zip(faces.into_iter()) {
         for quad in group.iter() {
-            indices.extend_from_slice(&face.quad_mesh_indices(quad, positions.len() as u32));
-            positions.extend_from_slice(&face.quad_mesh_positions(quad, Voxel::size()));
+            indices.extend_from_slice(
+                &face.quad_mesh_indices(&(*quad).into(), positions.len() as u32),
+            );
+            positions.extend_from_slice(&face.quad_mesh_positions(&(*quad).into(), Voxel::size()));
             normals.extend_from_slice(&face.quad_mesh_normals());
             tex_coords.extend_from_slice(&face.tex_coords(
                 RIGHT_HANDED_Y_UP_CONFIG.u_flip_face,
                 true,
-                quad,
+                &(*quad).into(),
             ));
             ao.extend_from_slice(&quad.ao);
         }
