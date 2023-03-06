@@ -36,7 +36,7 @@ default = [
 winit = "0.27.5"
 image = "0.24.5"
 bevy = { version = "0.9", default-features = false }
-bevy_kira_audio = { version = "0.14", default-features = false }
+bevy_kira_audio = { version = "0.15", default-features = false }
 bevy_flycam = "0.9.0"
 bevy-inspector-egui = "0.17"
 block-mesh = { git = "https://github.com/Dauthdaert/block-mesh-rs.git" }
