@@ -67,8 +67,8 @@ fn load_around_camera(
     mut world: ResMut<world::World>,
     camera_query: Query<&Transform, With<FlyCam>>,
 ) {
-    const HORIZONTAL_VIEW_DISTANCE: u32 = 32;
-    const VERTICAL_VIEW_DISTANCE: u32 = 12;
+    const HORIZONTAL_VIEW_DISTANCE: usize = 32;
+    const VERTICAL_VIEW_DISTANCE: usize = 12;
 
     let camera_translation = camera_query.single().translation;
     let camera_chunk_pos = ChunkPos::from_global_coords(
