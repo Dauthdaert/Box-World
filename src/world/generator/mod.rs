@@ -54,9 +54,14 @@ fn enqueue_chunk_generation(
                 for y in 0..ChunkData::edge() {
                     for x in 0..ChunkData::edge() {
                         let voxel_pos = VoxelPos::from_chunk_coords(pos, x, y, z);
-                        let voxel = if voxel_pos.y <= 3 {
-                            // Bedrock
-                            Voxel::Opaque(1)
+                        let voxel = if voxel_pos.y <= 20 {
+                            if voxel_pos.y < 17 {
+                                // Empty bottom chunk
+                                Voxel::Empty
+                            } else {
+                                // Bedrock
+                                Voxel::Opaque(1)
+                            }
                         } else {
                             let noise_val = noise
                                 .get([voxel_pos.x as f64 / 100.0, voxel_pos.z as f64 / 100.0])

@@ -11,7 +11,10 @@ pub struct ChunkBoundary {
 
 #[allow(dead_code)]
 impl ChunkBoundary {
-    pub fn new(center: ChunkData, neighbors: [ChunkData; 6]) -> Self {
+    pub fn new(center: ChunkData, neighbors: Vec<ChunkData>) -> Self {
+        // Must have 6 neighbors
+        assert!(neighbors.len() == 6);
+
         const MAX: u32 = ChunkData::edge();
         const BOUND: u32 = MAX + 1;
 

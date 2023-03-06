@@ -4,7 +4,6 @@ use bevy::{
 };
 
 use futures_lite::future;
-use rand::seq::IteratorRandom;
 
 use crate::chunk::{ChunkData, ChunkPos};
 
@@ -17,9 +16,7 @@ pub struct MesherPlugin;
 
 impl Plugin for MesherPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_system(enqueue_meshes)
-            .add_system(ease_meshes)
-            .add_system(periodic_mesh_maintenance);
+        app.add_system(enqueue_meshes).add_system(ease_meshes);
 
         app.add_system_to_stage(CoreStage::PostUpdate, handle_meshes);
     }
@@ -28,27 +25,6 @@ impl Plugin for MesherPlugin {
 #[derive(Component)]
 #[component(storage = "SparseSet")]
 pub struct NeedsMesh;
-
-#[allow(clippy::type_complexity)]
-fn periodic_mesh_maintenance(
-    mut commands: Commands,
-    chunks: Query<(Entity, &ChunkData), (With<Handle<Mesh>>, Without<NeedsMesh>)>,
-) {
-    let mut rng = rand::thread_rng();
-    for entity in chunks
-        .iter()
-        .filter_map(|(entity, data)| {
-            if data.is_uniform() {
-                Some(entity)
-            } else {
-                None
-            }
-        })
-        .choose_multiple(&mut rng, 2)
-    {
-        commands.entity(entity).insert(NeedsMesh);
-    }
-}
 
 #[derive(Component)]
 struct ComputeMesh(Task<(Entity, ChunkPos, Mesh)>);
@@ -66,14 +42,16 @@ fn enqueue_meshes(
     let thread_pool = AsyncComputeTaskPool::get();
 
     for (entity, pos, data) in needs_mesh.iter() {
-        let neighbors = world.get_chunk_neighbors(*pos).map(|entity| {
-            if let Some(entity) = entity {
-                if let Ok(data) = chunks.get(entity) {
-                    return data.clone();
-                }
-            }
-            ChunkData::default()
-        });
+        let neighbors: Vec<ChunkData> = world
+            .get_chunk_neighbors(*pos)
+            .into_iter()
+            .filter_map(|entity| chunks.get(entity).map(|data| data.clone()).ok())
+            .collect();
+
+        // Skip meshing when we don't have data for all neighbors
+        if neighbors.len() != 6 {
+            continue;
+        }
 
         // Clone out of needs_meshes before moving into task
         let pos = *pos;

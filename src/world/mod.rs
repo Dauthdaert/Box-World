@@ -114,8 +114,11 @@ impl World {
         self.chunks.get(&pos)
     }
 
-    pub fn get_chunk_neighbors(&self, pos: ChunkPos) -> [Option<Entity>; 6] {
-        pos.neighbors().map(|pos| self.chunks.get(&pos).copied())
+    pub fn get_chunk_neighbors(&self, pos: ChunkPos) -> Vec<Entity> {
+        pos.neighbors()
+            .iter()
+            .filter_map(|pos| self.chunks.get(pos).copied())
+            .collect()
     }
 
     pub fn get_unique_chunk_neighbors(&self, pos_list: Vec<ChunkPos>) -> Vec<Entity> {
