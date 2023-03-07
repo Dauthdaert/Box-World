@@ -18,7 +18,7 @@ impl Plugin for GeneratorPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_system(enqueue_chunk_generation);
 
-        app.add_system_to_stage(CoreStage::PostUpdate, handle_generation);
+        app.add_system(handle_generation.in_base_set(CoreSet::PostUpdate));
     }
 }
 

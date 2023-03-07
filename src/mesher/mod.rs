@@ -24,7 +24,7 @@ impl Plugin for MesherPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_system(enqueue_meshes).add_system(ease_meshes);
 
-        app.add_system_to_stage(CoreStage::PostUpdate, handle_meshes);
+        app.add_system(handle_meshes.in_base_set(CoreSet::PostUpdate));
     }
 }
 

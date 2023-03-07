@@ -33,12 +33,12 @@ default = [
 ]
 
 [dependencies]
-winit = "0.27.5"
+winit = "0.28.2"
 image = "0.24.5"
-bevy = { version = "0.9", default-features = false }
+bevy = { version = "0.10", default-features = false }
 bevy_kira_audio = { version = "0.15", default-features = false }
-bevy_flycam = "0.9.0"
-bevy-inspector-egui = "0.17"
+bevy_flycam = { git = "https://github.com/NiklasEi/bevy_flycam.git", branch = "bevy_main" }
+#bevy-inspector-egui = "0.17"
 futures-lite = "*"
 bitvec = "1.0.1"
 noise = { git = "https://github.com/Razaekel/noise-rs.git" }
