@@ -69,11 +69,11 @@ fn enqueue_meshes(
             continue;
         }
 
-        let neighbors: Vec<ChunkData> = neighbors.into_iter().cloned().collect();
-
         // Clone out of needs_meshes before moving into task
+        let neighbors: Vec<ChunkData> = neighbors.into_iter().cloned().collect();
         let pos = *pos;
         let data = data.clone();
+
         let task = thread_pool.spawn(async move {
             let mesh = generate_mesh(ChunkBoundary::new(data, neighbors));
             (entity, pos, mesh)

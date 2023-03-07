@@ -95,32 +95,34 @@ fn setup(mut commands: Commands) {
 fn load_around_camera(
     mut commands: Commands,
     mut world: ResMut<world::World>,
-    camera_query: Query<&Transform, With<FlyCam>>,
+    camera_query: Query<&Transform, (With<FlyCam>, Changed<Transform>)>,
 ) {
-    let camera_translation = camera_query.single().translation;
-    let camera_chunk_pos = ChunkPos::from_global_coords(
-        camera_translation.x,
-        camera_translation.y,
-        camera_translation.z,
-    );
+    if let Ok(camera_transform) = camera_query.get_single() {
+        let camera_translation = camera_transform.translation;
+        let camera_chunk_pos = ChunkPos::from_global_coords(
+            camera_translation.x,
+            camera_translation.y,
+            camera_translation.z,
+        );
 
-    let unloaded = world.unload_outside_range(camera_chunk_pos, HORIZONTAL_VIEW_DISTANCE);
-    for entity in unloaded.iter() {
-        commands.entity(*entity).despawn_recursive();
-    }
+        let unloaded = world.unload_outside_range(camera_chunk_pos, HORIZONTAL_VIEW_DISTANCE);
+        for entity in unloaded.iter() {
+            commands.entity(*entity).despawn_recursive();
+        }
 
-    let loaded = world.load_inside_range(
-        camera_chunk_pos,
-        HORIZONTAL_VIEW_DISTANCE,
-        VERTICAL_VIEW_DISTANCE,
-    );
-    for (pos, chunk) in loaded.into_iter() {
-        let entity = if let Some(chunk) = chunk {
-            commands.spawn((pos, chunk, NeedsMesh)).id()
-        } else {
-            commands.spawn((pos, NeedsChunkData)).id()
-        };
-        world.set(pos, entity);
+        let loaded = world.load_inside_range(
+            camera_chunk_pos,
+            HORIZONTAL_VIEW_DISTANCE,
+            VERTICAL_VIEW_DISTANCE,
+        );
+        for (pos, chunk) in loaded.into_iter() {
+            let entity = if let Some(chunk) = chunk {
+                commands.spawn((pos, chunk, NeedsMesh)).id()
+            } else {
+                commands.spawn((pos, NeedsChunkData)).id()
+            };
+            world.set(pos, entity);
+        }
     }
 }
 
