@@ -12,7 +12,7 @@ use crate::{
     voxel::{Voxel, VoxelPos},
 };
 
-const MIN_TERRAIN_HEIGHT: u32 = 40;
+const MIN_TERRAIN_HEIGHT: usize = 40;
 
 pub struct GeneratorPlugin;
 
@@ -20,7 +20,7 @@ impl Plugin for GeneratorPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_system(enqueue_chunk_generation);
 
-        app.add_system_to_stage(CoreStage::PostUpdate, handle_generation);
+        app.add_system(handle_generation.in_base_set(CoreSet::PostUpdate));
     }
 }
 
@@ -87,7 +87,10 @@ fn generate_voxel(
     density_noise: &dyn NoiseFn<f64, 3>,
     voxel_pos: VoxelPos,
 ) -> Voxel {
-    if voxel_pos.y <= 3 {
+    if voxel_pos.y < 17 {
+        // Empty bottom chunk
+        return Voxel::Empty;
+    } else if voxel_pos.y <= 20 {
         // Bedrock
         return Voxel::Opaque(1);
     }
@@ -109,9 +112,9 @@ fn generate_voxel(
     let terrain_height = if height_value > 0. {
         let pv_value = pv_noise.get([scaled_x, scaled_z]);
         let noise_avg = (height_value * 20.0 + pv_value * 60.0) / 2.;
-        MIN_TERRAIN_HEIGHT + noise_avg as u32
+        MIN_TERRAIN_HEIGHT + noise_avg as usize
     } else {
-        MIN_TERRAIN_HEIGHT + (height_value.abs() * 30.0) as u32
+        MIN_TERRAIN_HEIGHT + (height_value.abs() * 30.0) as usize
     };
 
     if (voxel_pos.y) < terrain_height {

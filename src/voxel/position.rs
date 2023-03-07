@@ -4,22 +4,22 @@ use crate::chunk::ChunkPos;
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct VoxelPos {
-    pub x: u32,
-    pub y: u32,
-    pub z: u32,
+    pub x: usize,
+    pub y: usize,
+    pub z: usize,
 }
 
 #[allow(dead_code)]
 impl VoxelPos {
-    pub fn new(x: u32, y: u32, z: u32) -> Self {
+    pub fn new(x: usize, y: usize, z: usize) -> Self {
         Self { x, y, z }
     }
 
     pub fn from_chunk_coords(
         chunk_pos: ChunkPos,
-        chunk_local_x: u32,
-        chunk_local_y: u32,
-        chunk_local_z: u32,
+        chunk_local_x: usize,
+        chunk_local_y: usize,
+        chunk_local_z: usize,
     ) -> Self {
         let chunk_voxel_pos = chunk_pos.to_voxel_coords();
         Self::new(

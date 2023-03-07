@@ -2,7 +2,10 @@ use bevy::{
     diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
     pbr::wireframe::{WireframeConfig, WireframePlugin},
     prelude::*,
-    render::settings::{WgpuFeatures, WgpuSettings},
+    render::{
+        settings::{WgpuFeatures, WgpuSettings},
+        RenderPlugin,
+    },
 };
 use bevy_flycam::{FlyCam, MovementSettings, NoCameraPlayerPlugin};
 use chunk::ChunkPos;
@@ -17,8 +20,17 @@ mod world;
 pub fn app() -> App {
     let mut app = App::new();
 
-    app.add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest()))
-        .add_plugin(NoCameraPlayerPlugin);
+    app.add_plugins(
+        DefaultPlugins
+            .set(ImagePlugin::default_nearest())
+            .set(RenderPlugin {
+                wgpu_settings: WgpuSettings {
+                    features: WgpuFeatures::POLYGON_MODE_LINE,
+                    ..default()
+                },
+            }),
+    )
+    .add_plugin(NoCameraPlayerPlugin);
 
     #[cfg(debug_assertions)]
     {
@@ -27,10 +39,6 @@ pub fn app() -> App {
 
         app.add_plugin(FrameTimeDiagnosticsPlugin::default())
             .add_plugin(LogDiagnosticsPlugin::default())
-            .insert_resource(WgpuSettings {
-                features: WgpuFeatures::POLYGON_MODE_LINE,
-                ..default()
-            })
             .add_plugin(WireframePlugin);
 
         // Wireframe defaults to off
@@ -67,8 +75,8 @@ fn load_around_camera(
     mut world: ResMut<world::World>,
     camera_query: Query<&Transform, With<FlyCam>>,
 ) {
-    const HORIZONTAL_VIEW_DISTANCE: u32 = 32;
-    const VERTICAL_VIEW_DISTANCE: u32 = 12;
+    const HORIZONTAL_VIEW_DISTANCE: usize = 32;
+    const VERTICAL_VIEW_DISTANCE: usize = 12;
 
     let camera_translation = camera_query.single().translation;
     let camera_chunk_pos = ChunkPos::from_global_coords(

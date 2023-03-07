@@ -4,51 +4,33 @@ use bevy::{
 };
 
 use futures_lite::future;
-use rand::seq::IteratorRandom;
 
 use crate::chunk::{ChunkData, ChunkPos};
 
 use self::{chunk_boundary::ChunkBoundary, generate::generate_mesh};
 
 mod chunk_boundary;
+mod face;
 mod generate;
+mod quads;
+mod side;
+mod visibility;
+
+pub use visibility::VoxelVisibility;
 
 pub struct MesherPlugin;
 
 impl Plugin for MesherPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_system(enqueue_meshes)
-            .add_system(ease_meshes)
-            .add_system(periodic_mesh_maintenance);
+        app.add_system(enqueue_meshes).add_system(ease_meshes);
 
-        app.add_system_to_stage(CoreStage::PostUpdate, handle_meshes);
+        app.add_system(handle_meshes.in_base_set(CoreSet::PostUpdate));
     }
 }
 
 #[derive(Component)]
 #[component(storage = "SparseSet")]
 pub struct NeedsMesh;
-
-#[allow(clippy::type_complexity)]
-fn periodic_mesh_maintenance(
-    mut commands: Commands,
-    chunks: Query<(Entity, &ChunkData), (With<Handle<Mesh>>, Without<NeedsMesh>)>,
-) {
-    let mut rng = rand::thread_rng();
-    for entity in chunks
-        .iter()
-        .filter_map(|(entity, data)| {
-            if data.is_uniform() {
-                Some(entity)
-            } else {
-                None
-            }
-        })
-        .choose_multiple(&mut rng, 2)
-    {
-        commands.entity(entity).insert(NeedsMesh);
-    }
-}
 
 #[derive(Component)]
 struct ComputeMesh(Task<(Entity, ChunkPos, Mesh)>);
@@ -66,14 +48,28 @@ fn enqueue_meshes(
     let thread_pool = AsyncComputeTaskPool::get();
 
     for (entity, pos, data) in needs_mesh.iter() {
-        let neighbors = world.get_chunk_neighbors(*pos).map(|entity| {
-            if let Some(entity) = entity {
-                if let Ok(data) = chunks.get(entity) {
-                    return data.clone();
-                }
+        let neighbors_entity = world.get_chunk_neighbors(*pos);
+
+        // Skip getting chunk data when we don't have data for all neighbors
+        if neighbors_entity.len() != 26 {
+            continue;
+        }
+
+        let mut neighbors = Vec::with_capacity(26);
+        for entity in neighbors_entity.into_iter() {
+            if let Ok(data) = chunks.get(entity) {
+                neighbors.push(data);
+            } else {
+                break;
             }
-            ChunkData::default()
-        });
+        }
+
+        // Skip meshing when we don't have data for all neighbors
+        if neighbors.len() != 26 {
+            continue;
+        }
+
+        let neighbors: Vec<ChunkData> = neighbors.into_iter().cloned().collect();
 
         // Clone out of needs_meshes before moving into task
         let pos = *pos;

@@ -56,8 +56,8 @@ impl World {
     pub fn load_inside_range(
         &mut self,
         pos: ChunkPos,
-        horizontal_distance: u32,
-        vertical_distance: u32,
+        horizontal_distance: usize,
+        vertical_distance: usize,
     ) -> Vec<(ChunkPos, Option<ChunkData>)> {
         let mut to_load = Vec::new();
         for z in 0..=horizontal_distance * 2 {
@@ -98,7 +98,7 @@ impl World {
             .expect("Chunk should exist at ChunkPos for unloading")
     }
 
-    pub fn unload_outside_range(&mut self, pos: ChunkPos, distance: u32) -> Vec<Entity> {
+    pub fn unload_outside_range(&mut self, pos: ChunkPos, distance: usize) -> Vec<Entity> {
         let mut to_remove = Vec::new();
         self.chunks.keys().for_each(|other_pos| {
             if pos.distance(other_pos) > distance as f32 {
@@ -114,8 +114,11 @@ impl World {
         self.chunks.get(&pos)
     }
 
-    pub fn get_chunk_neighbors(&self, pos: ChunkPos) -> [Option<Entity>; 6] {
-        pos.neighbors().map(|pos| self.chunks.get(&pos).copied())
+    pub fn get_chunk_neighbors(&self, pos: ChunkPos) -> Vec<Entity> {
+        pos.neighbors()
+            .iter()
+            .filter_map(|pos| self.chunks.get(pos).copied())
+            .collect()
     }
 
     pub fn get_unique_chunk_neighbors(&self, pos_list: Vec<ChunkPos>) -> Vec<Entity> {
