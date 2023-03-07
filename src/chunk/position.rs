@@ -40,14 +40,38 @@ impl ChunkPos {
         )
     }
 
-    pub fn neighbors(&self) -> [ChunkPos; 6] {
-        [
-            ChunkPos::new(self.x + 1, self.y, self.z),
+    pub fn neighbors(&self) -> Vec<ChunkPos> {
+        vec![
+            ChunkPos::new(
+                self.x.wrapping_sub(1),
+                self.y.wrapping_sub(1),
+                self.z.wrapping_sub(1),
+            ),
+            ChunkPos::new(self.x.wrapping_sub(1), self.y.wrapping_sub(1), self.z),
+            ChunkPos::new(self.x.wrapping_sub(1), self.y.wrapping_sub(1), self.z + 1),
+            ChunkPos::new(self.x.wrapping_sub(1), self.y, self.z.wrapping_sub(1)),
             ChunkPos::new(self.x.wrapping_sub(1), self.y, self.z),
-            ChunkPos::new(self.x, self.y + 1, self.z),
+            ChunkPos::new(self.x.wrapping_sub(1), self.y, self.z + 1),
+            ChunkPos::new(self.x.wrapping_sub(1), self.y + 1, self.z.wrapping_sub(1)),
+            ChunkPos::new(self.x.wrapping_sub(1), self.y + 1, self.z),
+            ChunkPos::new(self.x.wrapping_sub(1), self.y + 1, self.z + 1),
+            ChunkPos::new(self.x, self.y.wrapping_sub(1), self.z.wrapping_sub(1)),
             ChunkPos::new(self.x, self.y.wrapping_sub(1), self.z),
-            ChunkPos::new(self.x, self.y, self.z + 1),
+            ChunkPos::new(self.x, self.y.wrapping_sub(1), self.z + 1),
             ChunkPos::new(self.x, self.y, self.z.wrapping_sub(1)),
+            ChunkPos::new(self.x, self.y, self.z + 1),
+            ChunkPos::new(self.x, self.y + 1, self.z.wrapping_sub(1)),
+            ChunkPos::new(self.x, self.y + 1, self.z),
+            ChunkPos::new(self.x, self.y + 1, self.z + 1),
+            ChunkPos::new(self.x + 1, self.y.wrapping_sub(1), self.z.wrapping_sub(1)),
+            ChunkPos::new(self.x + 1, self.y.wrapping_sub(1), self.z),
+            ChunkPos::new(self.x + 1, self.y.wrapping_sub(1), self.z + 1),
+            ChunkPos::new(self.x + 1, self.y, self.z.wrapping_sub(1)),
+            ChunkPos::new(self.x + 1, self.y, self.z),
+            ChunkPos::new(self.x + 1, self.y, self.z + 1),
+            ChunkPos::new(self.x + 1, self.y + 1, self.z.wrapping_sub(1)),
+            ChunkPos::new(self.x + 1, self.y + 1, self.z),
+            ChunkPos::new(self.x + 1, self.y + 1, self.z + 1),
         ]
     }
 
