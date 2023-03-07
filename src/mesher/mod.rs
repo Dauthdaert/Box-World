@@ -48,16 +48,28 @@ fn enqueue_meshes(
     let thread_pool = AsyncComputeTaskPool::get();
 
     for (entity, pos, data) in needs_mesh.iter() {
-        let neighbors: Vec<ChunkData> = world
-            .get_chunk_neighbors(*pos)
-            .into_iter()
-            .filter_map(|entity| chunks.get(entity).map(|data| data.clone()).ok())
-            .collect();
+        let neighbors_entity = world.get_chunk_neighbors(*pos);
+
+        // Skip getting chunk data when we don't have data for all neighbors
+        if neighbors_entity.len() != 26 {
+            continue;
+        }
+
+        let mut neighbors = Vec::with_capacity(26);
+        for entity in neighbors_entity.into_iter() {
+            if let Ok(data) = chunks.get(entity) {
+                neighbors.push(data);
+            } else {
+                break;
+            }
+        }
 
         // Skip meshing when we don't have data for all neighbors
         if neighbors.len() != 26 {
             continue;
         }
+
+        let neighbors: Vec<ChunkData> = neighbors.into_iter().cloned().collect();
 
         // Clone out of needs_meshes before moving into task
         let pos = *pos;
