@@ -6,6 +6,7 @@ use bevy::{
         settings::{WgpuFeatures, WgpuSettings},
         RenderPlugin,
     },
+    window::PresentMode,
 };
 use bevy_flycam::{FlyCam, MovementSettings, NoCameraPlayerPlugin};
 use chunk::{ChunkPos, CHUNK_EDGE};
@@ -26,6 +27,15 @@ pub fn app() -> App {
 
     app.add_plugins(
         DefaultPlugins
+            .set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "Box World".into(),
+                    resolution: (1280., 720.).into(),
+                    present_mode: PresentMode::AutoVsync,
+                    ..default()
+                }),
+                ..default()
+            })
             .set(ImagePlugin::default_nearest())
             .set(RenderPlugin {
                 wgpu_settings: WgpuSettings {
