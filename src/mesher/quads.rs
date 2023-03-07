@@ -56,16 +56,19 @@ pub fn generate_quads_with_buffer(chunk_boundary: &ChunkBoundary, buffer: &mut Q
                 let idx = ChunkBoundary::linearize(x, y, z);
                 let voxel = voxels[idx];
 
+                let x_offset = ChunkBoundary::x_offset();
+                let y_offset = ChunkBoundary::y_offset();
+                let z_offset = ChunkBoundary::z_offset();
                 match voxel.visibility() {
                     VoxelVisibility::Empty => continue,
                     visibility => {
                         let neighbors = [
-                            voxels[idx - ChunkBoundary::x_offset()],
-                            voxels[idx + ChunkBoundary::x_offset()],
-                            voxels[idx - ChunkBoundary::y_offset()],
-                            voxels[idx + ChunkBoundary::y_offset()],
-                            voxels[idx - ChunkBoundary::z_offset()],
-                            voxels[idx + ChunkBoundary::z_offset()],
+                            voxels[idx - x_offset],
+                            voxels[idx + x_offset],
+                            voxels[idx - y_offset],
+                            voxels[idx + y_offset],
+                            voxels[idx - z_offset],
+                            voxels[idx + z_offset],
                         ];
 
                         for (i, neighbor) in neighbors.into_iter().enumerate() {

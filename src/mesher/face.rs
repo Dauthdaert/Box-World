@@ -154,109 +154,71 @@ fn face_aos(face: &Face, chunk: &ChunkBoundary) -> [u32; 4] {
     let [x, y, z] = face.voxel();
     let idx = ChunkBoundary::linearize(x, y, z);
 
+    let x_offset = ChunkBoundary::x_offset();
+    let y_offset = ChunkBoundary::y_offset();
+    let z_offset = ChunkBoundary::z_offset();
+
     let voxels = chunk.voxels();
     match face.side() {
         Side::X_NEG => side_aos([
-            voxels[idx - ChunkBoundary::x_offset() + ChunkBoundary::z_offset()],
-            voxels[idx - ChunkBoundary::x_offset() - ChunkBoundary::y_offset()
-                + ChunkBoundary::z_offset()],
-            voxels[idx - ChunkBoundary::x_offset() - ChunkBoundary::y_offset()],
-            voxels[idx
-                - ChunkBoundary::x_offset()
-                - ChunkBoundary::y_offset()
-                - ChunkBoundary::z_offset()],
-            voxels[idx - ChunkBoundary::x_offset() - ChunkBoundary::z_offset()],
-            voxels[idx - ChunkBoundary::x_offset() + ChunkBoundary::y_offset()
-                - ChunkBoundary::z_offset()],
-            voxels[idx - ChunkBoundary::x_offset() + ChunkBoundary::y_offset()],
-            voxels[idx - ChunkBoundary::x_offset()
-                + ChunkBoundary::y_offset()
-                + ChunkBoundary::z_offset()],
+            voxels[idx - x_offset + z_offset],
+            voxels[idx - x_offset - y_offset + z_offset],
+            voxels[idx - x_offset - y_offset],
+            voxels[idx - x_offset - y_offset - z_offset],
+            voxels[idx - x_offset - z_offset],
+            voxels[idx - x_offset + y_offset - z_offset],
+            voxels[idx - x_offset + y_offset],
+            voxels[idx - x_offset + y_offset + z_offset],
         ]),
         Side::X_POS => side_aos([
-            voxels[idx + ChunkBoundary::x_offset() - ChunkBoundary::z_offset()],
-            voxels[idx + ChunkBoundary::x_offset()
-                - ChunkBoundary::y_offset()
-                - ChunkBoundary::z_offset()],
-            voxels[idx + ChunkBoundary::x_offset() - ChunkBoundary::y_offset()],
-            voxels[idx + ChunkBoundary::x_offset() - ChunkBoundary::y_offset()
-                + ChunkBoundary::z_offset()],
-            voxels[idx + ChunkBoundary::x_offset() + ChunkBoundary::z_offset()],
-            voxels[idx
-                + ChunkBoundary::x_offset()
-                + ChunkBoundary::y_offset()
-                + ChunkBoundary::z_offset()],
-            voxels[idx + ChunkBoundary::x_offset() + ChunkBoundary::y_offset()],
-            voxels[idx + ChunkBoundary::x_offset() + ChunkBoundary::y_offset()
-                - ChunkBoundary::z_offset()],
+            voxels[idx + x_offset - z_offset],
+            voxels[idx + x_offset - y_offset - z_offset],
+            voxels[idx + x_offset - y_offset],
+            voxels[idx + x_offset - y_offset + z_offset],
+            voxels[idx + x_offset + z_offset],
+            voxels[idx + x_offset + y_offset + z_offset],
+            voxels[idx + x_offset + y_offset],
+            voxels[idx + x_offset + y_offset - z_offset],
         ]),
         Side::Y_NEG => side_aos([
-            voxels[idx - ChunkBoundary::x_offset() - ChunkBoundary::y_offset()],
-            voxels[idx - ChunkBoundary::x_offset() - ChunkBoundary::y_offset()
-                + ChunkBoundary::z_offset()],
-            voxels[idx - ChunkBoundary::y_offset() + ChunkBoundary::z_offset()],
-            voxels[idx + ChunkBoundary::x_offset() - ChunkBoundary::y_offset()
-                + ChunkBoundary::z_offset()],
-            voxels[idx + ChunkBoundary::x_offset() - ChunkBoundary::y_offset()],
-            voxels[idx + ChunkBoundary::x_offset()
-                - ChunkBoundary::y_offset()
-                - ChunkBoundary::z_offset()],
-            voxels[idx - ChunkBoundary::y_offset() - ChunkBoundary::z_offset()],
-            voxels[idx
-                - ChunkBoundary::x_offset()
-                - ChunkBoundary::y_offset()
-                - ChunkBoundary::z_offset()],
+            voxels[idx - x_offset - y_offset],
+            voxels[idx - x_offset - y_offset + z_offset],
+            voxels[idx - y_offset + z_offset],
+            voxels[idx + x_offset - y_offset + z_offset],
+            voxels[idx + x_offset - y_offset],
+            voxels[idx + x_offset - y_offset - z_offset],
+            voxels[idx - y_offset - z_offset],
+            voxels[idx - x_offset - y_offset - z_offset],
         ]),
         Side::Y_POS => side_aos([
-            voxels[idx + ChunkBoundary::y_offset() + ChunkBoundary::z_offset()],
-            voxels[idx - ChunkBoundary::x_offset()
-                + ChunkBoundary::y_offset()
-                + ChunkBoundary::z_offset()],
-            voxels[idx - ChunkBoundary::x_offset() + ChunkBoundary::y_offset()],
-            voxels[idx - ChunkBoundary::x_offset() + ChunkBoundary::y_offset()
-                - ChunkBoundary::z_offset()],
-            voxels[idx + ChunkBoundary::y_offset() - ChunkBoundary::z_offset()],
-            voxels[idx + ChunkBoundary::x_offset() + ChunkBoundary::y_offset()
-                - ChunkBoundary::z_offset()],
-            voxels[idx + ChunkBoundary::x_offset() + ChunkBoundary::y_offset()],
-            voxels[idx
-                + ChunkBoundary::x_offset()
-                + ChunkBoundary::y_offset()
-                + ChunkBoundary::z_offset()],
+            voxels[idx + y_offset + z_offset],
+            voxels[idx - x_offset + y_offset + z_offset],
+            voxels[idx - x_offset + y_offset],
+            voxels[idx - x_offset + y_offset - z_offset],
+            voxels[idx + y_offset - z_offset],
+            voxels[idx + x_offset + y_offset - z_offset],
+            voxels[idx + x_offset + y_offset],
+            voxels[idx + x_offset + y_offset + z_offset],
         ]),
         Side::Z_NEG => side_aos([
-            voxels[idx - ChunkBoundary::x_offset() - ChunkBoundary::z_offset()],
-            voxels[idx
-                - ChunkBoundary::x_offset()
-                - ChunkBoundary::y_offset()
-                - ChunkBoundary::z_offset()],
-            voxels[idx - ChunkBoundary::y_offset() - ChunkBoundary::z_offset()],
-            voxels[idx + ChunkBoundary::x_offset()
-                - ChunkBoundary::y_offset()
-                - ChunkBoundary::z_offset()],
-            voxels[idx + ChunkBoundary::x_offset() - ChunkBoundary::z_offset()],
-            voxels[idx + ChunkBoundary::x_offset() + ChunkBoundary::y_offset()
-                - ChunkBoundary::z_offset()],
-            voxels[idx + ChunkBoundary::y_offset() - ChunkBoundary::z_offset()],
-            voxels[idx - ChunkBoundary::x_offset() + ChunkBoundary::y_offset()
-                - ChunkBoundary::z_offset()],
+            voxels[idx - x_offset - z_offset],
+            voxels[idx - x_offset - y_offset - z_offset],
+            voxels[idx - y_offset - z_offset],
+            voxels[idx + x_offset - y_offset - z_offset],
+            voxels[idx + x_offset - z_offset],
+            voxels[idx + x_offset + y_offset - z_offset],
+            voxels[idx + y_offset - z_offset],
+            voxels[idx - x_offset + y_offset - z_offset],
         ]),
         Side::Z_POS => side_aos([
-            voxels[idx + ChunkBoundary::x_offset() + ChunkBoundary::z_offset()],
-            voxels[idx + ChunkBoundary::x_offset() - ChunkBoundary::y_offset()
-                + ChunkBoundary::z_offset()],
-            voxels[idx - ChunkBoundary::y_offset() + ChunkBoundary::z_offset()],
-            voxels[idx - ChunkBoundary::x_offset() - ChunkBoundary::y_offset()
-                + ChunkBoundary::z_offset()],
-            voxels[idx - ChunkBoundary::x_offset() + ChunkBoundary::z_offset()],
-            voxels[idx - ChunkBoundary::x_offset()
-                + ChunkBoundary::y_offset()
-                + ChunkBoundary::z_offset()],
-            voxels[idx + ChunkBoundary::y_offset() + ChunkBoundary::z_offset()],
-            voxels[idx
-                + ChunkBoundary::x_offset()
-                + ChunkBoundary::y_offset()
-                + ChunkBoundary::z_offset()],
+            voxels[idx + x_offset + z_offset],
+            voxels[idx + x_offset - y_offset + z_offset],
+            voxels[idx - y_offset + z_offset],
+            voxels[idx - x_offset - y_offset + z_offset],
+            voxels[idx - x_offset + z_offset],
+            voxels[idx - x_offset + y_offset + z_offset],
+            voxels[idx + y_offset + z_offset],
+            voxels[idx + x_offset + y_offset + z_offset],
         ]),
     }
 }
