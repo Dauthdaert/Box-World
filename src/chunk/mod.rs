@@ -10,7 +10,7 @@ mod storage;
 
 pub use position::ChunkPos;
 
-const CHUNK_EDGE: usize = 16;
+pub const CHUNK_EDGE: usize = 16;
 type ChunkShape = ConstShape3usize<CHUNK_EDGE, CHUNK_EDGE, CHUNK_EDGE>;
 
 #[derive(Component, Clone)]

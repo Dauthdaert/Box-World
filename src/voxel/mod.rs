@@ -1,4 +1,4 @@
-const VOXEL_SIZE: f32 = 4.0;
+pub const VOXEL_SIZE: f32 = 4.0;
 
 mod position;
 pub use position::VoxelPos;

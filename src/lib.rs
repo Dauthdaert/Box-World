@@ -8,7 +8,8 @@ use bevy::{
     },
 };
 use bevy_flycam::{FlyCam, MovementSettings, NoCameraPlayerPlugin};
-use chunk::ChunkPos;
+use chunk::{ChunkPos, CHUNK_EDGE};
+use voxel::VOXEL_SIZE;
 
 use crate::{mesher::NeedsMesh, world::NeedsChunkData};
 
@@ -16,6 +17,9 @@ mod chunk;
 mod mesher;
 mod voxel;
 mod world;
+
+const HORIZONTAL_VIEW_DISTANCE: usize = 32;
+const VERTICAL_VIEW_DISTANCE: usize = 12;
 
 pub fn app() -> App {
     let mut app = App::new();
@@ -66,6 +70,14 @@ fn setup(mut commands: Commands) {
             transform: Transform::from_xyz(10000., 400., 10000.).looking_at(Vec3::ZERO, Vec3::Y),
             ..default()
         },
+        FogSettings {
+            color: Color::rgba(0.5, 0.5, 0.5, 1.0),
+            falloff: FogFalloff::Linear {
+                start: ((HORIZONTAL_VIEW_DISTANCE - 4) * CHUNK_EDGE) as f32 * VOXEL_SIZE,
+                end: ((HORIZONTAL_VIEW_DISTANCE - 2) * CHUNK_EDGE) as f32 * VOXEL_SIZE,
+            },
+            ..default()
+        },
         FlyCam,
     ));
 }
@@ -75,9 +87,6 @@ fn load_around_camera(
     mut world: ResMut<world::World>,
     camera_query: Query<&Transform, With<FlyCam>>,
 ) {
-    const HORIZONTAL_VIEW_DISTANCE: usize = 32;
-    const VERTICAL_VIEW_DISTANCE: usize = 12;
-
     let camera_translation = camera_query.single().translation;
     let camera_chunk_pos = ChunkPos::from_global_coords(
         camera_translation.x,
