@@ -1,9 +1,9 @@
-use block_mesh::ndshape::{ConstShape, ConstShape3u32};
+use ndshape::{ConstShape, ConstShape3usize};
 
 use crate::{chunk::ChunkData, voxel::Voxel};
 
-const BOUNDARY_EDGE: u32 = ChunkData::edge() + 2;
-pub type BoundaryShape = ConstShape3u32<BOUNDARY_EDGE, BOUNDARY_EDGE, BOUNDARY_EDGE>;
+const BOUNDARY_EDGE: usize = ChunkData::edge() + 2;
+pub type BoundaryShape = ConstShape3usize<BOUNDARY_EDGE, BOUNDARY_EDGE, BOUNDARY_EDGE>;
 
 pub struct ChunkBoundary {
     voxels: Box<[Voxel]>,
@@ -15,8 +15,8 @@ impl ChunkBoundary {
         // Must have 26 neighbors
         assert!(neighbors.len() == 26);
 
-        const MAX: u32 = ChunkData::edge();
-        const BOUND: u32 = MAX + 1;
+        const MAX: usize = ChunkData::edge();
+        const BOUND: usize = MAX + 1;
 
         let voxels: Box<[Voxel]> = (0..BoundaryShape::SIZE)
             .map(BoundaryShape::delinearize)
@@ -60,16 +60,32 @@ impl ChunkBoundary {
         &self.voxels
     }
 
-    pub const fn size() -> u32 {
+    pub const fn edge() -> usize {
+        BOUNDARY_EDGE
+    }
+
+    pub const fn size() -> usize {
         BoundaryShape::SIZE
     }
 
-    pub fn linearize(x: u32, y: u32, z: u32) -> usize {
-        BoundaryShape::linearize([x, y, z]) as usize
+    pub fn linearize(x: usize, y: usize, z: usize) -> usize {
+        BoundaryShape::linearize([x, y, z])
     }
 
-    pub fn delinearize(idx: u32) -> (u32, u32, u32) {
+    pub fn delinearize(idx: usize) -> (usize, usize, usize) {
         let res = BoundaryShape::delinearize(idx);
         (res[0], res[1], res[2])
+    }
+
+    pub fn x_offset() -> usize {
+        ChunkBoundary::linearize(1, 0, 0) - ChunkBoundary::linearize(0, 0, 0)
+    }
+
+    pub fn y_offset() -> usize {
+        ChunkBoundary::linearize(0, 1, 0) - ChunkBoundary::linearize(0, 0, 0)
+    }
+
+    pub fn z_offset() -> usize {
+        ChunkBoundary::linearize(0, 0, 1) - ChunkBoundary::linearize(0, 0, 0)
     }
 }

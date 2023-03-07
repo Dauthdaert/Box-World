@@ -10,7 +10,13 @@ use crate::chunk::{ChunkData, ChunkPos};
 use self::{chunk_boundary::ChunkBoundary, generate::generate_mesh};
 
 mod chunk_boundary;
+mod face;
 mod generate;
+mod quads;
+mod side;
+mod visibility;
+
+pub use visibility::VoxelVisibility;
 
 pub struct MesherPlugin;
 

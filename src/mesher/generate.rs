@@ -2,32 +2,26 @@ use bevy::{
     prelude::Mesh,
     render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
-use block_mesh::{greedy_quads, GreedyQuadsBuffer, RIGHT_HANDED_Y_UP_CONFIG};
 
-use crate::{chunk::ChunkData, voxel::Voxel};
+use crate::voxel::Voxel;
 
-use super::chunk_boundary::{BoundaryShape, ChunkBoundary};
+use super::{
+    chunk_boundary::ChunkBoundary,
+    quads::{generate_quads_with_buffer, QuadGroups},
+};
 
-const UV_SCALE: f32 = 1.0 / 16.0;
+//const UV_SCALE: f32 = 1.0 / 16.0;
 
 pub fn generate_mesh(chunk: ChunkBoundary) -> Mesh {
-    let mut buffer = GreedyQuadsBuffer::new(ChunkBoundary::size() as usize);
+    let mut buffer = QuadGroups::default();
     generate_mesh_with_buffer(chunk, &mut buffer)
 }
 
-pub fn generate_mesh_with_buffer(chunk: ChunkBoundary, buffer: &mut GreedyQuadsBuffer) -> Mesh {
-    let faces = RIGHT_HANDED_Y_UP_CONFIG.faces;
+pub fn generate_mesh_with_buffer(chunk: ChunkBoundary, buffer: &mut QuadGroups) -> Mesh {
+    generate_quads_with_buffer(&chunk, buffer);
 
-    greedy_quads(
-        chunk.voxels(),
-        &BoundaryShape {},
-        [0; 3],
-        [ChunkData::edge() + 1; 3],
-        &faces,
-        buffer,
-    );
-    let num_indices = buffer.quads.num_quads() * 6;
-    let num_vertices = buffer.quads.num_quads() * 4;
+    let num_indices = buffer.num_quads() * 6;
+    let num_vertices = buffer.num_quads() * 4;
 
     let mut indices = Vec::with_capacity(num_indices);
     let mut positions = Vec::with_capacity(num_vertices);
@@ -35,24 +29,13 @@ pub fn generate_mesh_with_buffer(chunk: ChunkBoundary, buffer: &mut GreedyQuadsB
     let mut tex_coords = Vec::with_capacity(num_vertices);
     let mut ao = Vec::with_capacity(num_vertices);
 
-    for (group, face) in buffer.quads.groups.iter().zip(faces.into_iter()) {
-        for quad in group.iter() {
-            indices.extend_from_slice(&face.quad_mesh_indices(quad, positions.len() as u32));
-            positions.extend_from_slice(&face.quad_mesh_positions(quad, Voxel::size()));
-            normals.extend_from_slice(&face.quad_mesh_normals());
-            tex_coords.extend_from_slice(&face.tex_coords(
-                RIGHT_HANDED_Y_UP_CONFIG.u_flip_face,
-                true,
-                quad,
-            ));
-            ao.extend_from_slice(&quad.ao);
-        }
+    for face in buffer.iter_with_ao(&chunk) {
+        indices.extend_from_slice(&face.indices(positions.len() as u32));
+        positions.extend_from_slice(&face.positions(Voxel::size()));
+        normals.extend_from_slice(&face.normals());
+        tex_coords.extend_from_slice(&face.uvs(false, true));
+        ao.extend_from_slice(&face.aos());
     }
-
-    tex_coords
-        .iter_mut()
-        .flatten()
-        .for_each(|uv| *uv *= UV_SCALE);
 
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
@@ -64,7 +47,7 @@ pub fn generate_mesh_with_buffer(chunk: ChunkBoundary, buffer: &mut GreedyQuadsB
     mesh
 }
 
-fn convert_ao(ao: &[u8]) -> Vec<[f32; 4]> {
+fn convert_ao(ao: &[u32]) -> Vec<[f32; 4]> {
     ao.iter()
         .map(|val| match val {
             0 => [0.1, 0.1, 0.1, 1.0],

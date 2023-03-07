@@ -12,31 +12,17 @@ pub enum Voxel {
     Opaque(u16),
 }
 
-impl block_mesh::Voxel for Voxel {
-    fn get_visibility(&self) -> block_mesh::VoxelVisibility {
-        match self {
-            Voxel::Empty => block_mesh::VoxelVisibility::Empty,
-            Voxel::Transparent(_) => block_mesh::VoxelVisibility::Translucent,
-            Voxel::Opaque(_) => block_mesh::VoxelVisibility::Opaque,
-        }
-    }
-}
-
-impl block_mesh::MergeVoxel for Voxel {
-    type MergeValue = Self;
-    type MergeValueFacingNeighbour = Self;
-
-    fn merge_value(&self) -> Self::MergeValue {
-        *self
-    }
-
-    fn merge_value_facing_neighbour(&self) -> Self::MergeValueFacingNeighbour {
-        *self
-    }
-}
-
 impl Voxel {
     pub const fn size() -> f32 {
         VOXEL_SIZE
+    }
+
+    pub fn visibility(&self) -> crate::mesher::VoxelVisibility {
+        use crate::mesher::VoxelVisibility;
+        match self {
+            Voxel::Empty => VoxelVisibility::Empty,
+            Voxel::Transparent(_) => VoxelVisibility::Transparent,
+            Voxel::Opaque(_) => VoxelVisibility::Opaque,
+        }
     }
 }
