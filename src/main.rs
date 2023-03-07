@@ -1,10 +1,15 @@
 use std::io::Cursor;
 
-use bevy::{prelude::NonSend, window::WindowId, winit::WinitWindows};
+use bevy::{
+    prelude::{Entity, NonSend, Query, With},
+    window::Window,
+    winit::WinitWindows,
+};
 
-fn set_window_icon(windows: NonSend<WinitWindows>) {
-    let primary = windows
-        .get_window(WindowId::primary())
+fn set_window_icon(winit_windows: NonSend<WinitWindows>, windows: Query<Entity, With<Window>>) {
+    let window = windows.single();
+    let primary = winit_windows
+        .get_window(window)
         .expect("Primary window should exist.");
 
     let (icon_rgba, icon_width, icon_height) = {
