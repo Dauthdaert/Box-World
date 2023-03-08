@@ -17,6 +17,8 @@ pub fn generate_mesh(chunk: ChunkBoundary) -> Mesh {
     generate_mesh_with_buffer(chunk, &mut buffer)
 }
 
+/// Generate a mesh according to the chunk boundary
+/// Uses the algorithm described in this article : https://playspacefarer.com/voxel-meshing/
 pub fn generate_mesh_with_buffer(chunk: ChunkBoundary, buffer: &mut QuadGroups) -> Mesh {
     generate_quads_with_buffer(&chunk, buffer);
 
