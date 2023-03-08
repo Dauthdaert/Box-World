@@ -1,5 +1,6 @@
 use bevy::{
     diagnostic::{FrameTimeDiagnosticsPlugin, LogDiagnosticsPlugin},
+    input::common_conditions::input_toggle_active,
     pbr::wireframe::{WireframeConfig, WireframePlugin},
     prelude::*,
     render::{
@@ -9,6 +10,7 @@ use bevy::{
     window::PresentMode,
 };
 use bevy_flycam::{FlyCam, MovementSettings, NoCameraPlayerPlugin};
+use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use chunk::{LoadPoint, CHUNK_EDGE};
 use voxel::VOXEL_SIZE;
 
@@ -46,8 +48,9 @@ pub fn app() -> App {
 
     #[cfg(debug_assertions)]
     {
-        /*use bevy_inspector_egui::quick::WorldInspectorPlugin;
-        app.add_plugin(WorldInspectorPlugin);*/
+        app.add_plugin(
+            WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::F3)),
+        );
 
         app.add_plugin(FrameTimeDiagnosticsPlugin::default())
             .add_plugin(LogDiagnosticsPlugin::default())
