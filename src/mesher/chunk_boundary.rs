@@ -6,7 +6,7 @@ const BOUNDARY_EDGE: usize = ChunkData::edge() + 2;
 pub type BoundaryShape = ConstShape3usize<BOUNDARY_EDGE, BOUNDARY_EDGE, BOUNDARY_EDGE>;
 
 pub struct ChunkBoundary {
-    voxels: Box<[Voxel]>,
+    voxels: Box<[Voxel; BoundaryShape::SIZE]>,
 }
 
 #[allow(dead_code)]
@@ -18,9 +18,9 @@ impl ChunkBoundary {
         const MAX: usize = ChunkData::edge();
         const BOUND: usize = MAX + 1;
 
-        let voxels: Box<[Voxel]> = (0..BoundaryShape::SIZE)
-            .map(BoundaryShape::delinearize)
-            .map(|[x, y, z]| match (x, y, z) {
+        let voxels: Box<[Voxel; BoundaryShape::SIZE]> = Box::new(std::array::from_fn(|idx| {
+            let [x, y, z] = BoundaryShape::delinearize(idx);
+            match (x, y, z) {
                 (0, 0, 0) => neighbors[0].get(MAX - 1, MAX - 1, MAX - 1),
                 (0, 0, 1..=MAX) => neighbors[1].get(MAX - 1, MAX - 1, z - 1),
                 (0, 0, BOUND) => neighbors[2].get(MAX - 1, MAX - 1, 0),
@@ -50,13 +50,13 @@ impl ChunkBoundary {
                 (BOUND, BOUND, BOUND) => neighbors[25].get(0, 0, 0),
 
                 (_, _, _) => Voxel::Empty,
-            })
-            .collect();
+            }
+        }));
 
         Self { voxels }
     }
 
-    pub fn voxels(&self) -> &[Voxel] {
+    pub fn voxels(&self) -> &[Voxel; BoundaryShape::USIZE] {
         &self.voxels
     }
 
