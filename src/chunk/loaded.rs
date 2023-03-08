@@ -1,43 +1,16 @@
 use bevy::{
-    prelude::{Entity, Plugin, Query, Resource},
+    prelude::{Entity, Resource},
     utils::{HashMap, HashSet},
 };
-use rand::seq::IteratorRandom;
 
 use crate::chunk::{ChunkData, ChunkPos};
 
-mod generator;
-pub use generator::NeedsChunkData;
-
-pub struct WorldPlugin;
-
-impl Plugin for WorldPlugin {
-    fn build(&self, app: &mut bevy::prelude::App) {
-        app.insert_resource(World::new());
-
-        app.add_system(periodic_chunk_trim);
-
-        app.add_plugin(generator::GeneratorPlugin);
-    }
-}
-
-fn periodic_chunk_trim(mut chunks: Query<&mut ChunkData>) {
-    let mut rng = rand::thread_rng();
-    for mut data in chunks
-        .iter_mut()
-        .filter(|data| !data.is_uniform())
-        .choose_multiple(&mut rng, 2)
-    {
-        data.trim();
-    }
-}
-
 #[derive(Resource)]
-pub struct World {
+pub struct LoadedChunks {
     chunks: HashMap<ChunkPos, Entity>,
 }
 
-impl World {
+impl LoadedChunks {
     pub fn new() -> Self {
         Self {
             chunks: HashMap::new(),
@@ -93,6 +66,7 @@ impl World {
     }
 
     fn unload(&mut self, pos: ChunkPos) -> Entity {
+        // TODO: Save unloaded chunks to persistent storage
         self.chunks
             .remove(&pos)
             .expect("Chunk should exist at ChunkPos for unloading")
@@ -114,14 +88,14 @@ impl World {
         self.chunks.get(&pos)
     }
 
-    pub fn get_chunk_neighbors(&self, pos: ChunkPos) -> Vec<Entity> {
+    pub fn get_loaded_chunk_neighbors(&self, pos: ChunkPos) -> Vec<Entity> {
         pos.neighbors()
             .iter()
             .filter_map(|pos| self.chunks.get(pos).copied())
             .collect()
     }
 
-    pub fn get_unique_chunk_neighbors(&self, pos_list: Vec<ChunkPos>) -> Vec<Entity> {
+    pub fn get_unique_loaded_chunk_neighbors(&self, pos_list: Vec<ChunkPos>) -> Vec<Entity> {
         let set: HashSet<Entity> = pos_list
             .iter()
             .flat_map(|pos| pos.neighbors())

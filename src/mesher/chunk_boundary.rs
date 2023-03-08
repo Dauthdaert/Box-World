@@ -3,7 +3,7 @@ use ndshape::{ConstShape, ConstShape3usize};
 use crate::{chunk::ChunkData, voxel::Voxel};
 
 const BOUNDARY_EDGE: usize = ChunkData::edge() + 2;
-pub type BoundaryShape = ConstShape3usize<BOUNDARY_EDGE, BOUNDARY_EDGE, BOUNDARY_EDGE>;
+type BoundaryShape = ConstShape3usize<BOUNDARY_EDGE, BOUNDARY_EDGE, BOUNDARY_EDGE>;
 
 pub struct ChunkBoundary {
     voxels: Box<[Voxel; BoundaryShape::SIZE]>,

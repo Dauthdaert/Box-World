@@ -7,7 +7,7 @@ use futures_lite::future;
 use noise::{MultiFractal, NoiseFn, OpenSimplex, RidgedMulti};
 
 use crate::{
-    chunk::{ChunkData, ChunkPos},
+    chunk::{ChunkData, ChunkPos, LoadedChunks},
     mesher::NeedsMesh,
     voxel::{Voxel, VoxelPos},
 };
@@ -16,9 +16,9 @@ pub struct GeneratorPlugin;
 
 impl Plugin for GeneratorPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_system(enqueue_chunk_generation);
+        app.add_system(enqueue_chunk_generation_tasks);
 
-        app.add_system(handle_generation.in_base_set(CoreSet::PostUpdate));
+        app.add_system(handle_done_generation_tasks.in_base_set(CoreSet::PostUpdate));
     }
 }
 
@@ -29,7 +29,7 @@ pub struct NeedsChunkData;
 #[derive(Component)]
 struct ComputeChunkData(Task<(Entity, ChunkPos, ChunkData)>);
 
-fn enqueue_chunk_generation(
+fn enqueue_chunk_generation_tasks(
     mut commands: Commands,
     needs_generation: Query<(Entity, &ChunkPos), With<NeedsChunkData>>,
 ) {
@@ -43,7 +43,7 @@ fn enqueue_chunk_generation(
             .set_octaves(8)
             .set_frequency(0.25);
 
-    for (entity, pos) in needs_generation.iter() {
+    needs_generation.for_each(|(entity, pos)| {
         let pos = *pos;
         let noise = noise.clone();
 
@@ -84,16 +84,16 @@ fn enqueue_chunk_generation(
         commands.spawn(ComputeChunkData(task));
 
         commands.entity(entity).remove::<NeedsChunkData>();
-    }
+    });
 }
 
-fn handle_generation(
+fn handle_done_generation_tasks(
     mut commands: Commands,
-    world: Res<crate::world::World>,
+    world: Res<LoadedChunks>,
     mut generation_tasks: Query<(Entity, &mut ComputeChunkData)>,
 ) {
     let mut loaded = Vec::new();
-    for (task_entity, mut task) in generation_tasks.iter_mut() {
+    generation_tasks.for_each_mut(|(task_entity, mut task)| {
         if let Some((entity, pos, data)) = future::block_on(future::poll_once(&mut task.0)) {
             if let Some(mut commands) = commands.get_entity(entity) {
                 commands.insert((data, NeedsMesh));
@@ -102,10 +102,10 @@ fn handle_generation(
 
             commands.entity(task_entity).despawn_recursive();
         }
-    }
+    });
 
     // Re-mesh all neighbors after loading new chunks to simplify geometry
-    for neighbor in world.get_unique_chunk_neighbors(loaded) {
+    for neighbor in world.get_unique_loaded_chunk_neighbors(loaded) {
         commands.entity(neighbor).insert(NeedsMesh);
     }
 }

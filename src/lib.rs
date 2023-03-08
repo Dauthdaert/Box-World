@@ -9,15 +9,15 @@ use bevy::{
     window::PresentMode,
 };
 use bevy_flycam::{FlyCam, MovementSettings, NoCameraPlayerPlugin};
-use chunk::{ChunkPos, CHUNK_EDGE};
+use chunk::{ChunkPos, LoadedChunks, CHUNK_EDGE};
 use voxel::VOXEL_SIZE;
 
-use crate::{mesher::NeedsMesh, world::NeedsChunkData};
+use crate::{mesher::NeedsMesh, world_generator::NeedsChunkData};
 
 mod chunk;
 mod mesher;
 mod voxel;
-mod world;
+mod world_generator;
 
 const HORIZONTAL_VIEW_DISTANCE: usize = 32;
 const VERTICAL_VIEW_DISTANCE: usize = 12;
@@ -61,7 +61,8 @@ pub fn app() -> App {
 
     app.add_startup_system(setup);
 
-    app.add_plugin(world::WorldPlugin);
+    app.add_plugin(world_generator::GeneratorPlugin);
+    app.add_plugin(chunk::ChunkPlugin);
     app.add_plugin(mesher::MesherPlugin);
 
     app.add_system(load_around_camera);
@@ -94,7 +95,7 @@ fn setup(mut commands: Commands) {
 
 fn load_around_camera(
     mut commands: Commands,
-    mut world: ResMut<world::World>,
+    mut world: ResMut<LoadedChunks>,
     camera_query: Query<&Transform, (With<FlyCam>, Changed<Transform>)>,
 ) {
     if let Ok(camera_transform) = camera_query.get_single() {

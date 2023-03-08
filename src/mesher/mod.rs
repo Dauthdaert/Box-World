@@ -5,7 +5,7 @@ use bevy::{
 
 use futures_lite::future;
 
-use crate::chunk::{ChunkData, ChunkPos};
+use crate::chunk::{ChunkData, ChunkPos, LoadedChunks};
 
 use self::{chunk_boundary::ChunkBoundary, generate::generate_mesh};
 
@@ -22,9 +22,10 @@ pub struct MesherPlugin;
 
 impl Plugin for MesherPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_system(enqueue_meshes).add_system(ease_meshes);
+        app.add_system(enqueue_meshing_tasks)
+            .add_system(ease_meshes_to_position);
 
-        app.add_system(handle_meshes.in_base_set(CoreSet::PostUpdate));
+        app.add_system(handle_done_meshing_tasks.in_base_set(CoreSet::PostUpdate));
     }
 }
 
@@ -35,9 +36,9 @@ pub struct NeedsMesh;
 #[derive(Component)]
 struct ComputeMesh(Task<(Entity, ChunkPos, Mesh)>);
 
-fn enqueue_meshes(
+fn enqueue_meshing_tasks(
     mut commands: Commands,
-    world: Res<crate::world::World>,
+    world: Res<LoadedChunks>,
     needs_mesh: Query<(Entity, &ChunkPos, &ChunkData), With<NeedsMesh>>,
     chunks: Query<&ChunkData>,
 ) {
@@ -47,12 +48,12 @@ fn enqueue_meshes(
 
     let thread_pool = AsyncComputeTaskPool::get();
 
-    for (entity, pos, data) in needs_mesh.iter() {
-        let neighbors_entity = world.get_chunk_neighbors(*pos);
+    needs_mesh.for_each(|(entity, pos, data)| {
+        let neighbors_entity = world.get_loaded_chunk_neighbors(*pos);
 
         // Skip getting chunk data when we don't have data for all neighbors
         if neighbors_entity.len() != 26 {
-            continue;
+            return;
         }
 
         let mut neighbors = Vec::with_capacity(26);
@@ -60,13 +61,9 @@ fn enqueue_meshes(
             if let Ok(data) = chunks.get(entity) {
                 neighbors.push(data);
             } else {
-                break;
+                // Skip meshing when we don't have data for all neighbors
+                return;
             }
-        }
-
-        // Skip meshing when we don't have data for all neighbors
-        if neighbors.len() != 26 {
-            continue;
         }
 
         // Clone out of needs_meshes before moving into task
@@ -81,15 +78,15 @@ fn enqueue_meshes(
         commands.spawn(ComputeMesh(task));
 
         commands.entity(entity).remove::<NeedsMesh>();
-    }
+    });
 }
 
-fn handle_meshes(
+fn handle_done_meshing_tasks(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut mesh_tasks: Query<(Entity, &mut ComputeMesh)>,
 ) {
-    for (task_entity, mut task) in mesh_tasks.iter_mut() {
+    mesh_tasks.for_each_mut(|(task_entity, mut task)| {
         if let Some((entity, pos, mesh)) = future::block_on(future::poll_once(&mut task.0)) {
             let chunk_world_pos = pos.to_global_coords();
             if let Some(mut commands) = commands.get_entity(entity) {
@@ -113,7 +110,7 @@ fn handle_meshes(
 
             commands.entity(task_entity).despawn_recursive();
         }
-    }
+    });
 }
 
 #[derive(Component)]
@@ -121,7 +118,7 @@ fn handle_meshes(
 struct EaseToChunkPos;
 
 #[allow(clippy::type_complexity)]
-fn ease_meshes(
+fn ease_meshes_to_position(
     timer: Res<Time>,
     mut commands: Commands,
     mut chunks: Query<
@@ -129,7 +126,7 @@ fn ease_meshes(
         (With<Handle<Mesh>>, With<EaseToChunkPos>),
     >,
 ) {
-    for (entity, mut transform, pos) in chunks.iter_mut() {
+    chunks.for_each_mut(|(entity, mut transform, pos)| {
         let dt = timer.delta_seconds();
         let (_global_x, global_y, _global_z) = pos.to_global_coords();
         transform.translation.y = global_y.min(transform.translation.y + 100. * dt);
@@ -137,5 +134,5 @@ fn ease_meshes(
         if transform.translation.y == global_y {
             commands.entity(entity).remove::<EaseToChunkPos>();
         }
-    }
+    });
 }

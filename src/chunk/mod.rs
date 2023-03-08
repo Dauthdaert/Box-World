@@ -1,74 +1,34 @@
-use bevy::prelude::Component;
-use ndshape::{ConstShape, ConstShape3usize};
+use bevy::prelude::*;
+use rand::seq::IteratorRandom;
 
-use crate::voxel::Voxel;
-
-use storage::Storage;
-
+mod data;
+mod loaded;
 mod position;
 mod storage;
 
+pub use data::CHUNK_EDGE;
+
+pub use data::ChunkData;
+pub use loaded::LoadedChunks;
 pub use position::ChunkPos;
 
-pub const CHUNK_EDGE: usize = 16;
-type ChunkShape = ConstShape3usize<CHUNK_EDGE, CHUNK_EDGE, CHUNK_EDGE>;
+pub struct ChunkPlugin;
 
-#[derive(Component, Clone)]
-pub struct ChunkData {
-    voxels: Storage,
-    change_count: u16,
-}
+impl Plugin for ChunkPlugin {
+    fn build(&self, app: &mut bevy::prelude::App) {
+        app.insert_resource(LoadedChunks::new());
 
-impl Default for ChunkData {
-    fn default() -> Self {
-        Self {
-            voxels: Storage::new(ChunkShape::USIZE),
-            change_count: 0,
-        }
+        app.add_system(periodic_chunk_trim);
     }
 }
 
-#[allow(dead_code)]
-impl ChunkData {
-    pub fn get(&self, x: usize, y: usize, z: usize) -> Voxel {
-        self.voxels.get(Self::linearize(x, y, z))
-    }
-
-    pub fn set(&mut self, x: usize, y: usize, z: usize, voxel: Voxel) {
-        self.voxels.set(Self::linearize(x, y, z), voxel);
-        self.change_count += 1;
-
-        if self.change_count > 500 {
-            self.voxels.trim();
-            self.change_count = 0;
-        }
-    }
-
-    pub fn is_uniform(&self) -> bool {
-        match self.voxels {
-            Storage::Single(_) => true,
-            Storage::Multi(_) => false,
-        }
-    }
-
-    pub fn trim(&mut self) {
-        self.voxels.trim();
-    }
-
-    pub const fn size() -> usize {
-        ChunkShape::USIZE
-    }
-
-    pub const fn edge() -> usize {
-        CHUNK_EDGE
-    }
-
-    pub fn linearize(x: usize, y: usize, z: usize) -> usize {
-        ChunkShape::linearize([x, y, z])
-    }
-
-    pub fn delinearize(idx: usize) -> (usize, usize, usize) {
-        let res = ChunkShape::delinearize(idx);
-        (res[0], res[1], res[2])
+fn periodic_chunk_trim(mut chunks: Query<&mut ChunkData>) {
+    let mut rng = rand::thread_rng();
+    for mut data in chunks
+        .iter_mut()
+        .filter(|data| !data.is_uniform())
+        .choose_multiple(&mut rng, 2)
+    {
+        data.trim();
     }
 }
