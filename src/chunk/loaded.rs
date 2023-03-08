@@ -1,9 +1,12 @@
 use bevy::{
-    prelude::{Entity, Resource},
+    prelude::{Component, Entity, Resource},
     utils::{HashMap, HashSet},
 };
 
 use crate::chunk::{ChunkData, ChunkPos};
+
+#[derive(Component)]
+pub struct LoadPoint;
 
 #[derive(Resource)]
 pub struct LoadedChunks {
@@ -99,13 +102,7 @@ impl LoadedChunks {
         let set: HashSet<Entity> = pos_list
             .iter()
             .flat_map(|pos| pos.neighbors())
-            .filter_map(|pos| {
-                let entity = self.chunks.get(&pos).copied();
-                if let Some(entity) = entity {
-                    return Some(entity);
-                }
-                None
-            })
+            .filter_map(|pos| self.chunks.get(&pos).copied())
             .collect();
         set.into_iter().collect()
     }

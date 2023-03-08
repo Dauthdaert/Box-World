@@ -100,7 +100,7 @@ fn handle_done_generation_tasks(
                 loaded.push(pos);
             }
 
-            commands.entity(task_entity).despawn_recursive();
+            commands.entity(task_entity).despawn();
         }
     });
 

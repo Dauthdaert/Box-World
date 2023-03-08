@@ -49,6 +49,12 @@ fn enqueue_meshing_tasks(
     let thread_pool = AsyncComputeTaskPool::get();
 
     needs_mesh.for_each(|(entity, pos, data)| {
+        // Skip meshing if chunk is empty, garanteed empty mesh
+        if data.is_empty() {
+            commands.entity(entity).remove::<NeedsMesh>();
+            return;
+        }
+
         let neighbors_entity = world.get_loaded_chunk_neighbors(*pos);
 
         // Skip getting chunk data when we don't have data for all neighbors
@@ -108,7 +114,7 @@ fn handle_done_meshing_tasks(
                 }
             }
 
-            commands.entity(task_entity).despawn_recursive();
+            commands.entity(task_entity).despawn();
         }
     });
 }

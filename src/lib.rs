@@ -9,10 +9,8 @@ use bevy::{
     window::PresentMode,
 };
 use bevy_flycam::{FlyCam, MovementSettings, NoCameraPlayerPlugin};
-use chunk::{ChunkPos, LoadedChunks, CHUNK_EDGE};
+use chunk::{LoadPoint, CHUNK_EDGE};
 use voxel::VOXEL_SIZE;
-
-use crate::{mesher::NeedsMesh, world_generator::NeedsChunkData};
 
 mod chunk;
 mod mesher;
@@ -65,8 +63,6 @@ pub fn app() -> App {
     app.add_plugin(chunk::ChunkPlugin);
     app.add_plugin(mesher::MesherPlugin);
 
-    app.add_system(load_around_camera);
-
     app
 }
 
@@ -89,42 +85,9 @@ fn setup(mut commands: Commands) {
             },
             ..default()
         },
+        LoadPoint,
         FlyCam,
     ));
-}
-
-fn load_around_camera(
-    mut commands: Commands,
-    mut world: ResMut<LoadedChunks>,
-    camera_query: Query<&Transform, (With<FlyCam>, Changed<Transform>)>,
-) {
-    if let Ok(camera_transform) = camera_query.get_single() {
-        let camera_translation = camera_transform.translation;
-        let camera_chunk_pos = ChunkPos::from_global_coords(
-            camera_translation.x,
-            camera_translation.y,
-            camera_translation.z,
-        );
-
-        let unloaded = world.unload_outside_range(camera_chunk_pos, HORIZONTAL_VIEW_DISTANCE);
-        for entity in unloaded.iter() {
-            commands.entity(*entity).despawn_recursive();
-        }
-
-        let loaded = world.load_inside_range(
-            camera_chunk_pos,
-            HORIZONTAL_VIEW_DISTANCE,
-            VERTICAL_VIEW_DISTANCE,
-        );
-        for (pos, chunk) in loaded.into_iter() {
-            let entity = if let Some(chunk) = chunk {
-                commands.spawn((pos, chunk, NeedsMesh)).id()
-            } else {
-                commands.spawn((pos, NeedsChunkData)).id()
-            };
-            world.set(pos, entity);
-        }
-    }
 }
 
 fn toggle_wireframe(mut wireframe_config: ResMut<WireframeConfig>, kb_input: Res<Input<KeyCode>>) {

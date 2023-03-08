@@ -46,6 +46,10 @@ impl ChunkData {
         }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.is_uniform() && self.get(0, 0, 0) == Voxel::Empty
+    }
+
     pub fn trim(&mut self) {
         self.voxels.trim();
     }
