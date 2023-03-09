@@ -5,6 +5,7 @@ use bevy::{
 
 use bevy_rapier3d::prelude::Collider;
 use futures_lite::future;
+use rand::seq::IteratorRandom;
 
 use crate::chunk::{ChunkData, ChunkPos, LoadedChunks};
 
@@ -56,43 +57,48 @@ fn enqueue_meshing_tasks(
 
     let thread_pool = AsyncComputeTaskPool::get();
 
-    needs_mesh.for_each(|(entity, pos, data)| {
-        // Skip meshing if chunk is empty, garanteed empty mesh
-        if data.is_empty() {
-            commands.entity(entity).remove::<NeedsMesh>();
-            return;
-        }
-
-        let neighbors_entity = world.get_loaded_chunk_neighbors(*pos);
-
-        // Skip getting chunk data when we don't have data for all neighbors
-        if neighbors_entity.len() != 26 {
-            return;
-        }
-
-        let mut neighbors = Vec::with_capacity(26);
-        for entity in neighbors_entity.into_iter() {
-            if let Ok(data) = chunks.get(entity) {
-                neighbors.push(data);
-            } else {
-                // Skip meshing when we don't have data for all neighbors
+    let mut rng = rand::thread_rng();
+    needs_mesh
+        .iter()
+        .choose_multiple(&mut rng, 256)
+        .into_iter()
+        .for_each(|(entity, pos, data)| {
+            // Skip meshing if chunk is empty, garanteed empty mesh
+            if data.is_empty() {
+                commands.entity(entity).remove::<NeedsMesh>();
                 return;
             }
-        }
 
-        // Clone out of needs_meshes before moving into task
-        let neighbors: Vec<ChunkData> = neighbors.into_iter().cloned().collect();
-        let pos = *pos;
-        let data = data.clone();
+            let neighbors_entity = world.get_loaded_chunk_neighbors(*pos);
 
-        let task = thread_pool.spawn(async move {
-            let (mesh, collider) = generate_mesh(ChunkBoundary::new(data, neighbors));
-            (entity, pos, mesh, collider)
+            // Skip getting chunk data when we don't have data for all neighbors
+            if neighbors_entity.len() != 26 {
+                return;
+            }
+
+            let mut neighbors = Vec::with_capacity(26);
+            for entity in neighbors_entity.into_iter() {
+                if let Ok(data) = chunks.get(entity) {
+                    neighbors.push(data);
+                } else {
+                    // Skip meshing when we don't have data for all neighbors
+                    return;
+                }
+            }
+
+            // Clone out of needs_meshes before moving into task
+            let neighbors: Vec<ChunkData> = neighbors.into_iter().cloned().collect();
+            let pos = *pos;
+            let data = data.clone();
+
+            let task = thread_pool.spawn(async move {
+                let (mesh, collider) = generate_mesh(ChunkBoundary::new(data, neighbors));
+                (entity, pos, mesh, collider)
+            });
+            commands.spawn(ComputeMesh(task));
+
+            commands.entity(entity).remove::<NeedsMesh>();
         });
-        commands.spawn(ComputeMesh(task));
-
-        commands.entity(entity).remove::<NeedsMesh>();
-    });
 }
 
 fn handle_done_meshing_tasks(
