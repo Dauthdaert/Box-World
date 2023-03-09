@@ -2,18 +2,22 @@ use bitvec::prelude::*;
 
 use crate::voxel::Voxel;
 
+/// Adaptive compressed storage for voxel volume data
 #[derive(Clone, Debug)]
 pub enum Storage {
     Single(SingleStorage),
     Multi(MultiStorage),
 }
 
+/// Compressed storage for volumes with a single voxel type
 #[derive(Clone, Debug)]
 pub struct SingleStorage {
     size: usize,
     voxel: Voxel,
 }
 
+/// Palette compressed storage for volumes with multiple voxel types
+/// Based on https://voxel.wiki/wiki/palette-compression/
 #[derive(Clone, Debug)]
 pub struct MultiStorage {
     /// Size of chunk storage, in voxels
@@ -218,17 +222,22 @@ struct BitBuffer {
 }
 
 impl BitBuffer {
-    /// Create a new BitBuffer. size is specified in bits, not bytes.
+    /// Create a new BitBuffer
+    /// size is specified in bits, not bytes
     fn new(size: usize) -> Self {
         Self {
             bytes: BitVec::repeat(false, size),
         }
     }
 
+    /// Set arbitraty bits in BitBuffer.
+    /// idx, bit_length and bits are specified in bits, not bytes
     fn set(&mut self, idx: usize, bit_length: usize, bits: usize) {
         self.bytes[idx..idx + bit_length].store_le::<usize>(bits);
     }
 
+    /// Get arbitraty bits in BitBuffer.
+    /// idx, bit_length are specified in bits, not bytes
     fn get(&self, idx: usize, bit_length: usize) -> usize {
         self.bytes[idx..idx + bit_length].load_le::<usize>()
     }
