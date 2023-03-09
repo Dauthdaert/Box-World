@@ -16,31 +16,18 @@ opt-level = 3
 lto = true
 
 [features]
-default = [
-  "bevy/bevy_winit",
-  "bevy/bevy_render",
-  "bevy/bevy_core_pipeline",
-  "bevy/bevy_pbr",
-  "bevy/bevy_sprite",
-  "bevy/bevy_text",
-  "bevy/bevy_ui",
-  "bevy/bevy_asset",
-  "bevy/png",
-  "bevy/x11",
-  "bevy/wayland",
-  "bevy/filesystem_watcher",
-  "bevy_kira_audio/wav"
-]
+default = ["bevy/bevy_winit", "bevy/bevy_render", "bevy/bevy_core_pipeline", "bevy/bevy_pbr", "bevy/bevy_sprite", "bevy/bevy_text", "bevy/bevy_ui", "bevy/bevy_asset", "bevy/png", "bevy/x11", "bevy/wayland", "bevy/filesystem_watcher", "bevy_kira_audio/wav", "bevy_rapier3d/dim3", "bevy_rapier3d/async-collider", "bevy_rapier3d/debug-render-3d", "bevy_rapier3d/simd-nightly", "bevy_rapier3d/parallel"]
 
 [dependencies]
 winit = "0.28.2"
 image = "0.24.5"
 bevy = { version = "0.10", default-features = false }
 bevy_kira_audio = { version = "0.15", default-features = false }
-bevy_flycam = { git = "https://github.com/NiklasEi/bevy_flycam.git", branch = "bevy_main" }
 bevy-inspector-egui = "0.18"
+bevy_rapier3d = { version = "0.21.0", default-features = false }
 futures-lite = "*"
 bitvec = "1.0.1"
 noise = { git = "https://github.com/Razaekel/noise-rs.git" }
 rand = "0.8.5"
 ndshape = "0.3.0"
+itertools = "0.10.5"

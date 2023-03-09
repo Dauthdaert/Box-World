@@ -1,7 +1,9 @@
 use bevy::{
-    prelude::Mesh,
+    prelude::{Mesh, Vec3},
     render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
+use bevy_rapier3d::prelude::Collider;
+use itertools::Itertools;
 
 use crate::voxel::Voxel;
 
@@ -12,14 +14,17 @@ use super::{
 
 //const UV_SCALE: f32 = 1.0 / 16.0;
 
-pub fn generate_mesh(chunk: ChunkBoundary) -> Mesh {
+pub fn generate_mesh(chunk: ChunkBoundary) -> (Mesh, Option<Collider>) {
     let mut buffer = QuadGroups::default();
     generate_mesh_with_buffer(chunk, &mut buffer)
 }
 
 /// Generate a mesh according to the chunk boundary
 /// Uses the algorithm described in this article : https://playspacefarer.com/voxel-meshing/
-pub fn generate_mesh_with_buffer(chunk: ChunkBoundary, buffer: &mut QuadGroups) -> Mesh {
+pub fn generate_mesh_with_buffer(
+    chunk: ChunkBoundary,
+    buffer: &mut QuadGroups,
+) -> (Mesh, Option<Collider>) {
     generate_quads_with_buffer(&chunk, buffer);
 
     let num_quads = buffer.num_quads();
@@ -42,6 +47,20 @@ pub fn generate_mesh_with_buffer(chunk: ChunkBoundary, buffer: &mut QuadGroups) 
         texture_indices.extend_from_slice(&[face.texture_indice(); 4]);
     }
 
+    let collider = if !positions.is_empty() {
+        Some(Collider::trimesh(
+            positions.iter().copied().map(Vec3::from_array).collect(),
+            indices
+                .iter()
+                .copied()
+                .tuples()
+                .map(|(x, y, z)| [x, y, z])
+                .collect(),
+        ))
+    } else {
+        None
+    };
+
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
     mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
@@ -50,7 +69,7 @@ pub fn generate_mesh_with_buffer(chunk: ChunkBoundary, buffer: &mut QuadGroups) 
     mesh.insert_attribute(super::render::ATTRIBUTE_VOXEL_INDICES, texture_indices);
     mesh.set_indices(Some(Indices::U32(indices)));
 
-    mesh
+    (mesh, collider)
 }
 
 fn convert_ao(ao: &[u32]) -> Vec<[f32; 4]> {

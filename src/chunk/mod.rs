@@ -41,34 +41,32 @@ fn periodic_chunk_trim(mut chunks: Query<&mut ChunkData>) {
 fn load_around_load_points(
     mut commands: Commands,
     mut world: ResMut<LoadedChunks>,
-    load_query: Query<&Transform, (With<loaded::LoadPoint>, Changed<Transform>)>,
+    load_query: Query<&Transform, With<loaded::LoadPoint>>,
 ) {
-    // FIXME: Support multiple load points
-    if let Ok(camera_transform) = load_query.get_single() {
+    let mut load_pos = Vec::new();
+    for camera_transform in load_query.iter() {
         let load_translation = camera_transform.translation;
         let load_chunk_pos = ChunkPos::from_global_coords(
             load_translation.x,
             load_translation.y,
             load_translation.z,
         );
+        load_pos.push(load_chunk_pos);
+    }
 
-        let unloaded_chunks = world.unload_outside_range(load_chunk_pos, HORIZONTAL_VIEW_DISTANCE);
-        for entity in unloaded_chunks.iter() {
-            commands.entity(*entity).despawn_recursive();
-        }
+    let unloaded_chunks = world.unload_outside_range(&load_pos, HORIZONTAL_VIEW_DISTANCE);
+    for entity in unloaded_chunks.iter() {
+        commands.entity(*entity).despawn_recursive();
+    }
 
-        let loaded_chunks = world.load_inside_range(
-            load_chunk_pos,
-            HORIZONTAL_VIEW_DISTANCE,
-            VERTICAL_VIEW_DISTANCE,
-        );
-        for (pos, chunk) in loaded_chunks.into_iter() {
-            let entity = if let Some(chunk) = chunk {
-                commands.spawn((pos, chunk, NeedsMesh)).id()
-            } else {
-                commands.spawn((pos, NeedsChunkData)).id()
-            };
-            world.set(pos, entity);
-        }
+    let loaded_chunks =
+        world.load_inside_range(&load_pos, HORIZONTAL_VIEW_DISTANCE, VERTICAL_VIEW_DISTANCE);
+    for (pos, chunk) in loaded_chunks.into_iter() {
+        let entity = if let Some(chunk) = chunk {
+            commands.spawn((pos, chunk, NeedsMesh)).id()
+        } else {
+            commands.spawn((pos, NeedsChunkData)).id()
+        };
+        world.set(pos, entity);
     }
 }

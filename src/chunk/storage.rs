@@ -2,19 +2,19 @@ use bitvec::prelude::*;
 
 use crate::voxel::Voxel;
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum Storage {
     Single(SingleStorage),
     Multi(MultiStorage),
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct SingleStorage {
     size: usize,
     voxel: Voxel,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MultiStorage {
     /// Size of chunk storage, in voxels
     size: usize,
@@ -212,7 +212,7 @@ struct PaletteEntry {
     ref_count: usize,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct BitBuffer {
     bytes: BitVec<u8, Lsb0>,
 }

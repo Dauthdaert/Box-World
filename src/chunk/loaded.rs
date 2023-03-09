@@ -31,32 +31,34 @@ impl LoadedChunks {
 
     pub fn load_inside_range(
         &mut self,
-        pos: ChunkPos,
+        pos_lit: &[ChunkPos],
         horizontal_distance: usize,
         vertical_distance: usize,
     ) -> Vec<(ChunkPos, Option<ChunkData>)> {
-        let mut to_load = Vec::new();
+        let mut to_load = HashSet::new();
         for z in 0..=horizontal_distance * 2 {
             for y in 0..=vertical_distance * 2 {
                 for x in 0..=horizontal_distance * 2 {
-                    if pos.x + x < horizontal_distance
-                        || pos.y + y < vertical_distance
-                        || pos.z + z < horizontal_distance
-                    {
-                        continue;
-                    }
+                    for pos in pos_lit {
+                        if pos.x + x < horizontal_distance
+                            || pos.y + y < vertical_distance
+                            || pos.z + z < horizontal_distance
+                        {
+                            continue;
+                        }
 
-                    let other_pos = ChunkPos::new(
-                        pos.x + x - horizontal_distance,
-                        pos.y + y - vertical_distance,
-                        pos.z + z - horizontal_distance,
-                    );
+                        let other_pos = ChunkPos::new(
+                            pos.x + x - horizontal_distance,
+                            pos.y + y - vertical_distance,
+                            pos.z + z - horizontal_distance,
+                        );
 
-                    let chunk_distance = pos.distance(&other_pos);
-                    if chunk_distance < horizontal_distance as f32
-                        && !self.chunks.contains_key(&other_pos)
-                    {
-                        to_load.push(other_pos);
+                        let chunk_distance = pos.distance(&other_pos);
+                        if chunk_distance < horizontal_distance as f32
+                            && !self.chunks.contains_key(&other_pos)
+                        {
+                            to_load.insert(other_pos);
+                        }
                     }
                 }
             }
@@ -75,10 +77,13 @@ impl LoadedChunks {
             .expect("Chunk should exist at ChunkPos for unloading")
     }
 
-    pub fn unload_outside_range(&mut self, pos: ChunkPos, distance: usize) -> Vec<Entity> {
+    pub fn unload_outside_range(&mut self, pos_list: &[ChunkPos], distance: usize) -> Vec<Entity> {
         let mut to_remove = Vec::new();
         self.chunks.keys().for_each(|other_pos| {
-            if pos.distance(other_pos) > distance as f32 {
+            if pos_list
+                .iter()
+                .all(|pos| pos.distance(other_pos) > distance as f32)
+            {
                 to_remove.push(*other_pos);
             }
         });
@@ -98,7 +103,7 @@ impl LoadedChunks {
             .collect()
     }
 
-    pub fn get_unique_loaded_chunk_neighbors(&self, pos_list: Vec<ChunkPos>) -> Vec<Entity> {
+    pub fn get_unique_loaded_chunk_neighbors(&self, pos_list: &[ChunkPos]) -> Vec<Entity> {
         let set: HashSet<Entity> = pos_list
             .iter()
             .flat_map(|pos| pos.neighbors())

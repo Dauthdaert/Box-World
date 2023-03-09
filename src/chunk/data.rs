@@ -8,7 +8,7 @@ use super::storage::Storage;
 pub const CHUNK_EDGE: usize = 16;
 type ChunkShape = ConstShape3usize<CHUNK_EDGE, CHUNK_EDGE, CHUNK_EDGE>;
 
-#[derive(Component, Clone)]
+#[derive(Component, Clone, Debug)]
 pub struct ChunkData {
     voxels: Storage,
     change_count: u16,

@@ -3,6 +3,7 @@ use bevy::{
     tasks::{AsyncComputeTaskPool, Task},
 };
 
+use bevy_rapier3d::prelude::Collider;
 use futures_lite::future;
 
 use crate::chunk::{ChunkData, ChunkPos, LoadedChunks};
@@ -41,7 +42,7 @@ impl Plugin for MesherPlugin {
 pub struct NeedsMesh;
 
 #[derive(Component)]
-struct ComputeMesh(Task<(Entity, ChunkPos, Mesh)>);
+struct ComputeMesh(Task<(Entity, ChunkPos, Mesh, Option<Collider>)>);
 
 fn enqueue_meshing_tasks(
     mut commands: Commands,
@@ -85,8 +86,8 @@ fn enqueue_meshing_tasks(
         let data = data.clone();
 
         let task = thread_pool.spawn(async move {
-            let mesh = generate_mesh(ChunkBoundary::new(data, neighbors));
-            (entity, pos, mesh)
+            let (mesh, collider) = generate_mesh(ChunkBoundary::new(data, neighbors));
+            (entity, pos, mesh, collider)
         });
         commands.spawn(ComputeMesh(task));
 
@@ -101,7 +102,9 @@ fn handle_done_meshing_tasks(
     mut mesh_tasks: Query<(Entity, &mut ComputeMesh)>,
 ) {
     mesh_tasks.for_each_mut(|(task_entity, mut task)| {
-        if let Some((entity, pos, mesh)) = future::block_on(future::poll_once(&mut task.0)) {
+        if let Some((entity, pos, mesh, collider)) =
+            future::block_on(future::poll_once(&mut task.0))
+        {
             let chunk_world_pos = pos.to_global_coords();
             if let Some(mut commands) = commands.get_entity(entity) {
                 if mesh.indices().map_or(false, |indices| !indices.is_empty()) {
@@ -116,10 +119,15 @@ fn handle_done_meshing_tasks(
                             ),
                             ..default()
                         },
+                        collider.expect("Collider should exist if mesh exists"),
                         EaseToChunkPos,
                     ));
                 } else {
-                    commands.remove::<(MaterialMeshBundle<ArrayTextureMaterial>, EaseToChunkPos)>();
+                    commands.remove::<(
+                        MaterialMeshBundle<ArrayTextureMaterial>,
+                        Collider,
+                        EaseToChunkPos,
+                    )>();
                 }
             }
 
@@ -130,7 +138,7 @@ fn handle_done_meshing_tasks(
 
 #[derive(Component)]
 #[component(storage = "SparseSet")]
-struct EaseToChunkPos;
+pub struct EaseToChunkPos;
 
 #[allow(clippy::type_complexity)]
 fn ease_new_meshes_to_position(

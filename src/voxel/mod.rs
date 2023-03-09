@@ -1,4 +1,4 @@
-pub const VOXEL_SIZE: f32 = 4.0;
+pub const VOXEL_SIZE: f32 = 2.0;
 
 pub const VOXEL_AIR: Voxel = Voxel::Empty;
 pub const VOXEL_BEDROCK: Voxel = Voxel::Opaque(0);

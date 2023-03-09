@@ -18,9 +18,9 @@ impl ChunkPos {
 
     pub fn from_global_coords(x: f32, y: f32, z: f32) -> Self {
         Self {
-            x: (x / (Voxel::size() * ChunkData::edge() as f32)) as usize,
-            y: (y / (Voxel::size() * ChunkData::edge() as f32)) as usize,
-            z: (z / (Voxel::size() * ChunkData::edge() as f32)) as usize,
+            x: (x / (Voxel::size() * ChunkData::edge() as f32)).floor() as usize,
+            y: (y / (Voxel::size() * ChunkData::edge() as f32)).floor() as usize,
+            z: (z / (Voxel::size() * ChunkData::edge() as f32)).floor() as usize,
         }
     }
 

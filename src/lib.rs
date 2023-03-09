@@ -9,13 +9,15 @@ use bevy::{
     },
     window::PresentMode,
 };
-use bevy_flycam::{FlyCam, MovementSettings, NoCameraPlayerPlugin};
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use chunk::{LoadPoint, CHUNK_EDGE};
-use voxel::VOXEL_SIZE;
+use chunk::LoadPoint;
+use mesher::EaseToChunkPos;
+use states::GameStates;
 
 mod chunk;
 mod mesher;
+mod player;
+mod states;
 mod voxel;
 mod world_generator;
 
@@ -47,8 +49,7 @@ pub fn app() -> App {
                 watch_for_changes: true,
                 ..default()
             }),
-    )
-    .add_plugin(NoCameraPlayerPlugin);
+    );
 
     #[cfg(debug_assertions)]
     {
@@ -64,11 +65,15 @@ pub fn app() -> App {
         app.add_system(toggle_wireframe);
     }
 
-    app.add_startup_system(setup);
+    app.add_state::<GameStates>();
+
+    app.add_startup_system(setup)
+        .add_system(transition_after_load.in_set(OnUpdate(GameStates::Loading)));
 
     app.add_plugin(world_generator::GeneratorPlugin);
     app.add_plugin(chunk::ChunkPlugin);
     app.add_plugin(mesher::MesherPlugin);
+    app.add_plugin(player::PlayerPlugin);
 
     app
 }
@@ -79,27 +84,28 @@ fn setup(mut commands: Commands) {
         brightness: 0.8,
     });
 
-    // Setup flying camera
-    commands.insert_resource(MovementSettings {
-        speed: 60.0,
-        ..default()
-    });
     commands.spawn((
-        Camera3dBundle {
-            transform: Transform::from_xyz(10000., 400., 10000.).looking_at(Vec3::ZERO, Vec3::Y),
+        /*Camera3dBundle {
+            transform: Transform::from_xyz(10000., 400., 10000.),
             ..default()
-        },
-        FogSettings {
-            color: Color::rgba(0.5, 0.5, 0.5, 1.0),
-            falloff: FogFalloff::Linear {
-                start: ((HORIZONTAL_VIEW_DISTANCE - 4) * CHUNK_EDGE) as f32 * VOXEL_SIZE,
-                end: ((HORIZONTAL_VIEW_DISTANCE - 2) * CHUNK_EDGE) as f32 * VOXEL_SIZE,
-            },
+        },*/
+        TransformBundle {
+            local: Transform::from_xyz(10000., 400., 10000.),
             ..default()
         },
         LoadPoint,
-        FlyCam,
     ));
+}
+
+fn transition_after_load(
+    mut next_state: ResMut<NextState<GameStates>>,
+    chunks: Query<(), (With<Handle<Mesh>>, Without<EaseToChunkPos>)>,
+    timer: Res<Time>,
+) {
+    if timer.elapsed_seconds() > 10. && chunks.iter().count() > 700 {
+        next_state.set(GameStates::InGame);
+        info!("Done loading!");
+    }
 }
 
 fn toggle_wireframe(mut wireframe_config: ResMut<WireframeConfig>, kb_input: Res<Input<KeyCode>>) {

@@ -113,7 +113,7 @@ fn handle_done_generation_tasks(
     });
 
     // Re-mesh all neighbors after loading new chunks to simplify geometry
-    for neighbor in world.get_unique_loaded_chunk_neighbors(loaded) {
+    for neighbor in world.get_unique_loaded_chunk_neighbors(&loaded) {
         commands.entity(neighbor).insert(NeedsMesh);
     }
 }
