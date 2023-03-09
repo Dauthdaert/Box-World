@@ -22,14 +22,16 @@ pub fn generate_mesh(chunk: ChunkBoundary) -> Mesh {
 pub fn generate_mesh_with_buffer(chunk: ChunkBoundary, buffer: &mut QuadGroups) -> Mesh {
     generate_quads_with_buffer(&chunk, buffer);
 
-    let num_indices = buffer.num_quads() * 6;
-    let num_vertices = buffer.num_quads() * 4;
+    let num_quads = buffer.num_quads();
+    let num_indices = num_quads * 6;
+    let num_vertices = num_quads * 4;
 
     let mut indices = Vec::with_capacity(num_indices);
     let mut positions = Vec::with_capacity(num_vertices);
     let mut normals = Vec::with_capacity(num_vertices);
     let mut tex_coords = Vec::with_capacity(num_vertices);
     let mut ao = Vec::with_capacity(num_vertices);
+    let mut texture_indices = Vec::with_capacity(num_vertices);
 
     for face in buffer.iter_with_ao(&chunk) {
         indices.extend_from_slice(&face.indices(positions.len() as u32));
@@ -37,6 +39,7 @@ pub fn generate_mesh_with_buffer(chunk: ChunkBoundary, buffer: &mut QuadGroups) 
         normals.extend_from_slice(&face.normals());
         tex_coords.extend_from_slice(&face.uvs(false, true));
         ao.extend_from_slice(&face.aos());
+        texture_indices.extend_from_slice(&[face.texture_indice(); 4]);
     }
 
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
@@ -44,6 +47,7 @@ pub fn generate_mesh_with_buffer(chunk: ChunkBoundary, buffer: &mut QuadGroups) 
     mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
     mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, tex_coords);
     mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, convert_ao(&ao));
+    mesh.insert_attribute(super::render::ATTRIBUTE_VOXEL_INDICES, texture_indices);
     mesh.set_indices(Some(Indices::U32(indices)));
 
     mesh

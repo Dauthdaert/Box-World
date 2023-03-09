@@ -42,6 +42,10 @@ pub fn app() -> App {
                     features: WgpuFeatures::POLYGON_MODE_LINE,
                     ..default()
                 },
+            })
+            .set(AssetPlugin {
+                watch_for_changes: true,
+                ..default()
             }),
     )
     .add_plugin(NoCameraPlayerPlugin);
@@ -70,6 +74,11 @@ pub fn app() -> App {
 }
 
 fn setup(mut commands: Commands) {
+    commands.insert_resource(AmbientLight {
+        color: Color::WHITE,
+        brightness: 0.8,
+    });
+
     // Setup flying camera
     commands.insert_resource(MovementSettings {
         speed: 60.0,

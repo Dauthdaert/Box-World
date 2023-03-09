@@ -24,6 +24,10 @@ impl<'a> Face<'a> {
         self.side
     }
 
+    pub fn texture_indice(&self) -> u32 {
+        self.quad.texture_indice
+    }
+
     pub fn indices(&self, start: u32) -> [u32; 6] {
         [start, start + 2, start + 1, start + 1, start + 2, start + 3]
     }

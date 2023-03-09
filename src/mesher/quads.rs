@@ -7,6 +7,7 @@ use super::{
 #[derive(Copy, Clone, Debug)]
 pub struct Quad {
     pub voxel: [usize; 3],
+    pub texture_indice: u32,
     pub width: u32,
     pub height: u32,
 }
@@ -87,6 +88,7 @@ pub fn generate_quads_with_buffer(chunk_boundary: &ChunkBoundary, buffer: &mut Q
                             if generate {
                                 buffer.groups[i].push(Quad {
                                     voxel: [x, y, z],
+                                    texture_indice: voxels[idx].indice(),
                                     width: 1,
                                     height: 1,
                                 });

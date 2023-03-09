@@ -9,7 +9,7 @@ use noise::{MultiFractal, NoiseFn, OpenSimplex, RidgedMulti};
 use crate::{
     chunk::{ChunkData, ChunkPos, LoadedChunks},
     mesher::NeedsMesh,
-    voxel::{Voxel, VoxelPos},
+    voxel::{VoxelPos, VOXEL_AIR, VOXEL_BEDROCK, VOXEL_GRASS, VOXEL_STONE},
 };
 
 pub struct GeneratorPlugin;
@@ -57,21 +57,29 @@ fn enqueue_chunk_generation_tasks(
                         let voxel = if voxel_pos.y <= 20 {
                             if voxel_pos.y < 17 {
                                 // Empty bottom chunk
-                                Voxel::Empty
+                                VOXEL_AIR
                             } else {
                                 // Bedrock
-                                Voxel::Opaque(1)
+                                VOXEL_BEDROCK
                             }
                         } else {
                             let noise_val = noise
                                 .get([voxel_pos.x as f64 / 100.0, voxel_pos.z as f64 / 100.0])
                                 * 100.0;
-                            if (voxel_pos.y as f64) < 100. + noise_val {
+                            if (voxel_pos.y as f64) < 102. + noise_val {
+                                // Stoney peaks
+                                if voxel_pos.y > 150 {
+                                    VOXEL_STONE
+                                } else {
+                                    // Grass
+                                    VOXEL_GRASS
+                                }
+                            } else if (voxel_pos.y as f64) < 100. + noise_val {
                                 // Stone
-                                Voxel::Opaque(2)
+                                VOXEL_STONE
                             } else {
                                 // Air
-                                Voxel::Empty
+                                VOXEL_AIR
                             }
                         };
 

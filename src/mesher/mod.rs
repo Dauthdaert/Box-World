@@ -7,12 +7,13 @@ use futures_lite::future;
 
 use crate::chunk::{ChunkData, ChunkPos, LoadedChunks};
 
-use self::{chunk_boundary::ChunkBoundary, generate::generate_mesh};
+use self::{chunk_boundary::ChunkBoundary, generate::generate_mesh, render::*};
 
 mod chunk_boundary;
 mod face;
 mod generate;
 mod quads;
+mod render;
 mod side;
 mod visibility;
 
@@ -23,9 +24,15 @@ pub struct MesherPlugin;
 impl Plugin for MesherPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_system(enqueue_meshing_tasks)
-            .add_system(ease_meshes_to_position);
+            .add_system(handle_done_meshing_tasks.in_base_set(CoreSet::PostUpdate))
+            .add_system(ease_new_meshes_to_position);
 
-        app.add_system(handle_done_meshing_tasks.in_base_set(CoreSet::PostUpdate));
+        app.add_plugin(MaterialPlugin::<ArrayTextureMaterial>::default())
+            .add_startup_system(load_terrain_texture)
+            .add_system(
+                create_terrain_texture_array
+                    .run_if(|texture: Res<TerrainTexture>| !texture.is_loaded()),
+            );
     }
 }
 
@@ -89,6 +96,7 @@ fn enqueue_meshing_tasks(
 
 fn handle_done_meshing_tasks(
     mut commands: Commands,
+    terrain_texture: Res<TerrainTexture>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut mesh_tasks: Query<(Entity, &mut ComputeMesh)>,
 ) {
@@ -98,7 +106,8 @@ fn handle_done_meshing_tasks(
             if let Some(mut commands) = commands.get_entity(entity) {
                 if mesh.indices().map_or(false, |indices| !indices.is_empty()) {
                     commands.insert((
-                        PbrBundle {
+                        MaterialMeshBundle {
+                            material: terrain_texture.material_handle().clone_weak(),
                             mesh: meshes.add(mesh),
                             transform: Transform::from_xyz(
                                 chunk_world_pos.0,
@@ -110,7 +119,7 @@ fn handle_done_meshing_tasks(
                         EaseToChunkPos,
                     ));
                 } else {
-                    commands.remove::<(PbrBundle, EaseToChunkPos)>();
+                    commands.remove::<(MaterialMeshBundle<ArrayTextureMaterial>, EaseToChunkPos)>();
                 }
             }
 
@@ -124,7 +133,7 @@ fn handle_done_meshing_tasks(
 struct EaseToChunkPos;
 
 #[allow(clippy::type_complexity)]
-fn ease_meshes_to_position(
+fn ease_new_meshes_to_position(
     timer: Res<Time>,
     mut commands: Commands,
     mut chunks: Query<
