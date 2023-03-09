@@ -75,7 +75,7 @@ impl Material for ArrayTextureMaterial {
 pub fn load_terrain_texture(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(TerrainTexture {
         is_loaded: false,
-        texture_handle: asset_server.load("textures/array_texture.png"),
+        texture_handle: asset_server.load("textures/terrain_texture.png"),
         ..default()
     });
 }

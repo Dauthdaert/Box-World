@@ -13,7 +13,7 @@ fn set_window_icon(winit_windows: NonSend<WinitWindows>, windows: Query<Entity, 
         .expect("Primary window should exist.");
 
     let (icon_rgba, icon_width, icon_height) = {
-        let icon_buf = Cursor::new(include_bytes!("../assets/bevy.png"));
+        let icon_buf = Cursor::new(include_bytes!("../assets/icon.png"));
         let rgba = image::load(icon_buf, image::ImageFormat::Png)
             .expect("Failed to open icon path.")
             .into_rgba8();
