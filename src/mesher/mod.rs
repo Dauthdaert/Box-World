@@ -28,7 +28,7 @@ impl Plugin for MesherPlugin {
             .add_system(handle_done_meshing_tasks.in_base_set(CoreSet::PostUpdate))
             .add_system(ease_new_meshes_to_position);
 
-        app.add_plugin(MaterialPlugin::<ArrayTextureMaterial>::default())
+        app.add_plugin(MaterialPlugin::<TerrainTextureMaterial>::default())
             .add_startup_system(load_terrain_texture)
             .add_system(
                 create_terrain_texture_array
@@ -124,7 +124,7 @@ fn handle_done_meshing_tasks(
                     ));
                 } else {
                     commands.remove::<(
-                        MaterialMeshBundle<ArrayTextureMaterial>,
+                        MaterialMeshBundle<TerrainTextureMaterial>,
                         Collider,
                         EaseToChunkPos,
                     )>();

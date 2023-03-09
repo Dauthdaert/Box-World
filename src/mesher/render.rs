@@ -14,7 +14,7 @@ const SINGLE_TEXTURE_SIZE: f32 = 32.0;
 pub struct TerrainTexture {
     is_loaded: bool,
     texture_handle: Handle<Image>,
-    material_handle: Handle<ArrayTextureMaterial>,
+    material_handle: Handle<TerrainTextureMaterial>,
 }
 
 impl TerrainTexture {
@@ -22,7 +22,7 @@ impl TerrainTexture {
         self.is_loaded
     }
 
-    pub fn material_handle(&self) -> &Handle<ArrayTextureMaterial> {
+    pub fn material_handle(&self) -> &Handle<TerrainTextureMaterial> {
         &self.material_handle
     }
 }
@@ -32,13 +32,13 @@ pub const ATTRIBUTE_VOXEL_INDICES: MeshVertexAttribute =
 
 #[derive(AsBindGroup, Debug, Clone, TypeUuid)]
 #[uuid = "8033ab15-49da-4f1f-b2aa-ecda82927520"]
-pub struct ArrayTextureMaterial {
+pub struct TerrainTextureMaterial {
     #[texture(0, dimension = "2d_array")]
     #[sampler(1)]
-    array_texture: Handle<Image>,
+    terrain_texture: Handle<Image>,
 }
 
-impl Material for ArrayTextureMaterial {
+impl Material for TerrainTextureMaterial {
     fn vertex_shader() -> bevy::render::render_resource::ShaderRef {
         "shaders/chunk_vertex.wgsl".into()
     }
@@ -84,7 +84,7 @@ pub fn create_terrain_texture_array(
     asset_server: Res<AssetServer>,
     mut terrain_texture: ResMut<TerrainTexture>,
     mut images: ResMut<Assets<Image>>,
-    mut materials: ResMut<Assets<ArrayTextureMaterial>>,
+    mut materials: ResMut<Assets<TerrainTextureMaterial>>,
 ) {
     if asset_server.get_load_state(terrain_texture.texture_handle.clone()) != LoadState::Loaded {
         return;
@@ -99,7 +99,7 @@ pub fn create_terrain_texture_array(
     image.reinterpret_stacked_2d_as_array(num_layers);
 
     // Create material
-    terrain_texture.material_handle = materials.add(ArrayTextureMaterial {
-        array_texture: terrain_texture.texture_handle.clone(),
+    terrain_texture.material_handle = materials.add(TerrainTextureMaterial {
+        terrain_texture: terrain_texture.texture_handle.clone(),
     });
 }
