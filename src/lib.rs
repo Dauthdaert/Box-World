@@ -68,6 +68,7 @@ pub fn app() -> App {
     app.add_state::<GameStates>();
 
     app.add_startup_system(setup)
+        .insert_resource(LoadingTimer::new())
         .add_system(transition_after_load.in_set(OnUpdate(GameStates::Loading)));
 
     app.add_plugin(world_generator::GeneratorPlugin);
@@ -97,14 +98,28 @@ fn setup(mut commands: Commands) {
     ));
 }
 
+#[derive(Resource)]
+struct LoadingTimer(pub Timer);
+
+impl LoadingTimer {
+    fn new() -> Self {
+        Self(Timer::from_seconds(1.0, TimerMode::Repeating))
+    }
+}
+
 fn transition_after_load(
     mut next_state: ResMut<NextState<GameStates>>,
     chunks: Query<(), (With<Handle<Mesh>>, Without<EaseToChunkPos>)>,
-    timer: Res<Time>,
+    time: Res<Time>,
+    mut loading_timer: ResMut<LoadingTimer>,
 ) {
-    if timer.elapsed_seconds() > 10. && chunks.iter().count() > 55 * 55 {
-        next_state.set(GameStates::InGame);
-        info!("Done loading!");
+    if loading_timer.0.tick(time.delta()).just_finished() {
+        if time.elapsed_seconds() > 10. && chunks.iter().count() > 55 * 55 {
+            next_state.set(GameStates::InGame);
+            info!("Done loading!");
+        } else {
+            info!("Don't worry, we're still loading.");
+        }
     }
 }
 
