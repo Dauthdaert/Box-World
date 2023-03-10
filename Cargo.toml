@@ -16,7 +16,7 @@ opt-level = 3
 lto = true
 
 [features]
-default = ["bevy/bevy_winit", "bevy/bevy_render", "bevy/bevy_core_pipeline", "bevy/bevy_pbr", "bevy/bevy_sprite", "bevy/bevy_text", "bevy/bevy_ui", "bevy/bevy_asset", "bevy/png", "bevy/x11", "bevy/wayland", "bevy/filesystem_watcher", "bevy_kira_audio/wav", "bevy_rapier3d/dim3", "bevy_rapier3d/async-collider", "bevy_rapier3d/debug-render-3d", "bevy_rapier3d/simd-nightly", "bevy_rapier3d/parallel"]
+default = ["bevy/bevy_winit", "bevy/bevy_render", "bevy/bevy_core_pipeline", "bevy/bevy_pbr", "bevy/bevy_sprite", "bevy/bevy_text", "bevy/bevy_ui", "bevy/bevy_asset", "bevy/png", "bevy/ktx2", "bevy/x11", "bevy/wayland", "bevy/filesystem_watcher", "bevy_kira_audio/wav", "bevy_rapier3d/dim3", "bevy_rapier3d/async-collider", "bevy_rapier3d/debug-render-3d", "bevy_rapier3d/simd-nightly", "bevy_rapier3d/parallel"]
 
 [dependencies]
 winit = "0.28.2"

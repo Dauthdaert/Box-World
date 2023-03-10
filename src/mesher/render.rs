@@ -8,8 +8,6 @@ use bevy::{
     },
 };
 
-const SINGLE_TEXTURE_SIZE: f32 = 32.0;
-
 #[derive(Resource, Default)]
 pub struct TerrainTexture {
     is_loaded: bool,
@@ -75,15 +73,14 @@ impl Material for TerrainTextureMaterial {
 pub fn load_terrain_texture(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(TerrainTexture {
         is_loaded: false,
-        texture_handle: asset_server.load("textures/terrain_texture.png"),
+        texture_handle: asset_server.load("textures/terrain_texture.ktx2"),
         ..default()
     });
 }
 
-pub fn create_terrain_texture_array(
+pub fn create_terrain_texture_material(
     asset_server: Res<AssetServer>,
     mut terrain_texture: ResMut<TerrainTexture>,
-    mut images: ResMut<Assets<Image>>,
     mut materials: ResMut<Assets<TerrainTextureMaterial>>,
 ) {
     if asset_server.get_load_state(terrain_texture.texture_handle.clone()) != LoadState::Loaded {
@@ -91,12 +88,6 @@ pub fn create_terrain_texture_array(
     }
 
     terrain_texture.is_loaded = true;
-    let image = images.get_mut(&terrain_texture.texture_handle).unwrap();
-
-    // Create new array texture
-    let num_layers = (image.size().y / SINGLE_TEXTURE_SIZE) as u32;
-    info!("Dectected {} layers in terrain texture.", num_layers);
-    image.reinterpret_stacked_2d_as_array(num_layers);
 
     // Create material
     terrain_texture.material_handle = materials.add(TerrainTextureMaterial {

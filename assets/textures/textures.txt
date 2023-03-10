@@ -1,0 +1,5 @@
+split/bedrock.png
+split/grass.png
+split/dirt.png
+split/snow.png
+split/stone.png

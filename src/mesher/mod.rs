@@ -32,7 +32,7 @@ impl Plugin for MesherPlugin {
         app.add_plugin(MaterialPlugin::<TerrainTextureMaterial>::default())
             .add_startup_system(load_terrain_texture)
             .add_system(
-                create_terrain_texture_array
+                create_terrain_texture_material
                     .run_if(|texture: Res<TerrainTexture>| !texture.is_loaded()),
             );
     }

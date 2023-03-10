@@ -767,6 +767,7 @@ dependencies = [
  "futures-lite",
  "hexasphere",
  "image",
+ "ktx2",
  "naga",
  "once_cell",
  "parking_lot",
@@ -2154,6 +2155,15 @@ checksum = "8367585489f01bc55dd27404dcf56b95e6da061a256a666ab23be9ba96a2e587"
 dependencies = [
  "bitflags",
  "libc",
+]
+
+[[package]]
+name = "ktx2"
+version = "0.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "87d65e08a9ec02e409d27a0139eaa6b9756b4d81fe7cde71f6941a83730ce838"
+dependencies = [
+ "bitflags",
 ]
 
 [[package]]
