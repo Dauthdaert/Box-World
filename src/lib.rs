@@ -114,7 +114,7 @@ fn transition_after_load(
     mut loading_timer: ResMut<LoadingTimer>,
 ) {
     if loading_timer.0.tick(time.delta()).just_finished() {
-        if time.elapsed_seconds() > 10. && chunks.iter().count() > 55 * 55 {
+        if time.elapsed_seconds() > 10. && chunks.iter().count() > 60 * 60 {
             next_state.set(GameStates::InGame);
             info!("Done loading!");
         } else {
