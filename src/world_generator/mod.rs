@@ -43,56 +43,59 @@ fn enqueue_chunk_generation_tasks(
             .set_octaves(8)
             .set_frequency(0.25);
 
-    needs_generation.for_each(|(entity, pos)| {
-        let pos = *pos;
-        let noise = noise.clone();
+    needs_generation
+        .iter()
+        .take(4096)
+        .for_each(|(entity, pos)| {
+            let pos = *pos;
+            let noise = noise.clone();
 
-        let task = thread_pool.spawn(async move {
-            let mut chunk = ChunkData::default();
+            let task = thread_pool.spawn(async move {
+                let mut chunk = ChunkData::default();
 
-            for z in 0..ChunkData::edge() {
-                for y in 0..ChunkData::edge() {
-                    for x in 0..ChunkData::edge() {
-                        let voxel_pos = VoxelPos::from_chunk_coords(pos, x, y, z);
-                        let voxel = if voxel_pos.y <= 20 {
-                            if voxel_pos.y < 17 {
-                                // Empty bottom chunk
-                                VOXEL_AIR
+                for z in 0..ChunkData::edge() {
+                    for y in 0..ChunkData::edge() {
+                        for x in 0..ChunkData::edge() {
+                            let voxel_pos = VoxelPos::from_chunk_coords(pos, x, y, z);
+                            let voxel = if voxel_pos.y <= 20 {
+                                if voxel_pos.y < 17 {
+                                    // Empty bottom chunk
+                                    VOXEL_AIR
+                                } else {
+                                    // Bedrock
+                                    VOXEL_BEDROCK
+                                }
                             } else {
-                                // Bedrock
-                                VOXEL_BEDROCK
-                            }
-                        } else {
-                            let noise_val = noise
-                                .get([voxel_pos.x as f64 / 100.0, voxel_pos.z as f64 / 100.0])
-                                * 100.0;
-                            if (voxel_pos.y as f64) < 102. + noise_val {
-                                // Stoney peaks
-                                if voxel_pos.y > 150 {
+                                let noise_val = noise
+                                    .get([voxel_pos.x as f64 / 100.0, voxel_pos.z as f64 / 100.0])
+                                    * 100.0;
+                                if (voxel_pos.y as f64) < 102. + noise_val {
+                                    // Stoney peaks
+                                    if voxel_pos.y > 150 {
+                                        VOXEL_STONE
+                                    } else {
+                                        // Grass
+                                        VOXEL_GRASS
+                                    }
+                                } else if (voxel_pos.y as f64) < 100. + noise_val {
+                                    // Stone
                                     VOXEL_STONE
                                 } else {
-                                    // Grass
-                                    VOXEL_GRASS
+                                    // Air
+                                    VOXEL_AIR
                                 }
-                            } else if (voxel_pos.y as f64) < 100. + noise_val {
-                                // Stone
-                                VOXEL_STONE
-                            } else {
-                                // Air
-                                VOXEL_AIR
-                            }
-                        };
+                            };
 
-                        chunk.set(x, y, z, voxel);
+                            chunk.set(x, y, z, voxel);
+                        }
                     }
                 }
-            }
-            (entity, pos, chunk)
-        });
-        commands.spawn(ComputeChunkData(task));
+                (entity, pos, chunk)
+            });
+            commands.spawn(ComputeChunkData(task));
 
-        commands.entity(entity).remove::<NeedsChunkData>();
-    });
+            commands.entity(entity).remove::<NeedsChunkData>();
+        });
 }
 
 fn handle_done_generation_tasks(
@@ -101,16 +104,19 @@ fn handle_done_generation_tasks(
     mut generation_tasks: Query<(Entity, &mut ComputeChunkData)>,
 ) {
     let mut loaded = Vec::new();
-    generation_tasks.for_each_mut(|(task_entity, mut task)| {
-        if let Some((entity, pos, data)) = future::block_on(future::poll_once(&mut task.0)) {
-            if let Some(mut commands) = commands.get_entity(entity) {
-                commands.insert((data, NeedsMesh));
-                loaded.push(pos);
-            }
+    generation_tasks
+        .iter_mut()
+        .take(4096)
+        .for_each(|(task_entity, mut task)| {
+            if let Some((entity, pos, data)) = future::block_on(future::poll_once(&mut task.0)) {
+                if let Some(mut commands) = commands.get_entity(entity) {
+                    commands.insert((data, NeedsMesh));
+                    loaded.push(pos);
+                }
 
-            commands.entity(task_entity).despawn();
-        }
-    });
+                commands.entity(task_entity).despawn();
+            }
+        });
 
     // Re-mesh all neighbors after loading new chunks to simplify geometry
     for neighbor in world.get_unique_loaded_chunk_neighbors(&loaded) {
