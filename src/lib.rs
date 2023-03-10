@@ -102,7 +102,7 @@ fn transition_after_load(
     chunks: Query<(), (With<Handle<Mesh>>, Without<EaseToChunkPos>)>,
     timer: Res<Time>,
 ) {
-    if timer.elapsed_seconds() > 10. && chunks.iter().count() > 50 * 50 {
+    if timer.elapsed_seconds() > 10. && chunks.iter().count() > 55 * 55 {
         next_state.set(GameStates::InGame);
         info!("Done loading!");
     }
