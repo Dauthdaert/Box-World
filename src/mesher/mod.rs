@@ -7,7 +7,10 @@ use bevy_rapier3d::prelude::Collider;
 use futures_lite::future;
 use rand::seq::IteratorRandom;
 
-use crate::chunk::{ChunkData, ChunkPos, LoadedChunks};
+use crate::{
+    chunk::{ChunkData, ChunkPos, LoadedChunks},
+    states::GameStates,
+};
 
 use self::{chunk_boundary::ChunkBoundary, generate::generate_mesh, render::*};
 
@@ -104,6 +107,7 @@ fn enqueue_meshing_tasks(
 fn handle_done_meshing_tasks(
     mut commands: Commands,
     terrain_texture: Res<TerrainTexture>,
+    state: Res<State<GameStates>>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut mesh_tasks: Query<(Entity, &mut ComputeMesh)>,
 ) {
@@ -114,25 +118,32 @@ fn handle_done_meshing_tasks(
             let chunk_world_pos = pos.to_global_coords();
             if let Some(mut commands) = commands.get_entity(entity) {
                 if mesh.indices().map_or(false, |indices| !indices.is_empty()) {
+                    let height = if state.0 == GameStates::Loading {
+                        // If we're loading, don't animate chunk spawning
+                        chunk_world_pos.1
+                    } else {
+                        -100.
+                    };
+
                     commands.insert((
                         MaterialMeshBundle {
                             material: terrain_texture.material_handle().clone_weak(),
                             mesh: meshes.add(mesh),
                             transform: Transform::from_xyz(
                                 chunk_world_pos.0,
-                                -100.,
+                                height,
                                 chunk_world_pos.2,
                             ),
                             ..default()
                         },
-                        collider.expect("Collider should exist if mesh exists"),
                         EaseToChunkPos,
+                        collider.expect("Collider should exist if mesh exists"),
                     ));
                 } else {
                     commands.remove::<(
                         MaterialMeshBundle<TerrainTextureMaterial>,
-                        Collider,
                         EaseToChunkPos,
+                        Collider,
                     )>();
                 }
             }
