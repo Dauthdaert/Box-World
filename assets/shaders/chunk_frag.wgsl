@@ -29,7 +29,7 @@ fn fragment(in: FragmentInput) -> @location(0) vec4<f32> {
     var pbr_input: PbrInput = pbr_input_new();
     pbr_input.material.metallic = 0.0;
     pbr_input.material.reflectance = 0.0;
-    pbr_input.material.perceptual_roughness = 0.8;
+    pbr_input.material.perceptual_roughness = 0.9;
 
     // Get color form array texture
     pbr_input.material.base_color = textureSample(terrain_texture, terrain_texture_sampler, in.uv, i32(in.voxel_indice));
