@@ -7,10 +7,7 @@ use bevy_rapier3d::prelude::Collider;
 use futures_lite::future;
 use rand::seq::IteratorRandom;
 
-use crate::{
-    chunk::{ChunkData, ChunkPos, LoadedChunks},
-    states::GameStates,
-};
+use crate::chunk::{ChunkData, ChunkPos, LoadedChunks};
 
 use self::{chunk_boundary::ChunkBoundary, generate::generate_mesh, render::*};
 
@@ -30,7 +27,7 @@ impl Plugin for MesherPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_system(enqueue_meshing_tasks)
             .add_system(handle_done_meshing_tasks.in_base_set(CoreSet::PostUpdate))
-            .add_system(ease_new_meshes_to_position);
+            .add_system(rapier_slowdown_workaround);
 
         app.add_plugin(MaterialPlugin::<TerrainTextureMaterial>::default())
             .add_startup_system(load_terrain_texture)
@@ -107,7 +104,7 @@ fn enqueue_meshing_tasks(
 fn handle_done_meshing_tasks(
     mut commands: Commands,
     terrain_texture: Res<TerrainTexture>,
-    state: Res<State<GameStates>>,
+    chunks: Query<(), (With<ChunkData>, With<Transform>)>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut mesh_tasks: Query<(Entity, &mut ComputeMesh)>,
 ) {
@@ -115,36 +112,33 @@ fn handle_done_meshing_tasks(
         if let Some((entity, pos, mesh, collider)) =
             future::block_on(future::poll_once(&mut task.0))
         {
-            let chunk_world_pos = pos.to_global_coords();
+            let (chunk_world_x, chunk_world_y, chunk_world_z) = pos.to_global_coords();
             if let Some(mut commands) = commands.get_entity(entity) {
                 if mesh.indices().map_or(false, |indices| !indices.is_empty()) {
-                    let height = if state.0 == GameStates::Loading {
-                        // If we're loading, don't animate chunk spawning
-                        chunk_world_pos.1
+                    if chunks.get(entity).is_ok() {
+                        commands.insert((
+                            meshes.add(mesh),
+                            RapierSlowdownWorkaround,
+                            collider.expect("Collider should exist if mesh exists"),
+                        ));
                     } else {
-                        -100.
-                    };
-
-                    commands.insert((
-                        MaterialMeshBundle {
-                            material: terrain_texture.material_handle().clone_weak(),
-                            mesh: meshes.add(mesh),
-                            transform: Transform::from_xyz(
-                                chunk_world_pos.0,
-                                height,
-                                chunk_world_pos.2,
-                            ),
-                            ..default()
-                        },
-                        EaseToChunkPos,
-                        collider.expect("Collider should exist if mesh exists"),
-                    ));
+                        commands.insert((
+                            MaterialMeshBundle {
+                                material: terrain_texture.material_handle().clone_weak(),
+                                mesh: meshes.add(mesh),
+                                transform: Transform::from_xyz(
+                                    chunk_world_x,
+                                    chunk_world_y,
+                                    chunk_world_z,
+                                ),
+                                ..default()
+                            },
+                            RapierSlowdownWorkaround,
+                            collider.expect("Collider should exist if mesh exists"),
+                        ));
+                    }
                 } else {
-                    commands.remove::<(
-                        MaterialMeshBundle<TerrainTextureMaterial>,
-                        EaseToChunkPos,
-                        Collider,
-                    )>();
+                    commands.remove::<(MaterialMeshBundle<TerrainTextureMaterial>, Collider)>();
                 }
             }
 
@@ -155,24 +149,14 @@ fn handle_done_meshing_tasks(
 
 #[derive(Component)]
 #[component(storage = "SparseSet")]
-pub struct EaseToChunkPos;
+pub struct RapierSlowdownWorkaround;
 
-#[allow(clippy::type_complexity)]
-fn ease_new_meshes_to_position(
-    timer: Res<Time>,
+fn rapier_slowdown_workaround(
     mut commands: Commands,
-    mut chunks: Query<
-        (Entity, &mut Transform, &ChunkPos),
-        (With<Handle<Mesh>>, With<EaseToChunkPos>),
-    >,
+    mut chunks: Query<(Entity, &mut Transform), With<RapierSlowdownWorkaround>>,
 ) {
-    chunks.for_each_mut(|(entity, mut transform, pos)| {
-        let dt = timer.delta_seconds();
-        let (_global_x, global_y, _global_z) = pos.to_global_coords();
-        transform.translation.y = global_y.min(transform.translation.y + 100. * dt);
-
-        if transform.translation.y == global_y {
-            commands.entity(entity).remove::<EaseToChunkPos>();
-        }
+    chunks.for_each_mut(|(entity, mut transform)| {
+        transform.set_changed();
+        commands.entity(entity).remove::<RapierSlowdownWorkaround>();
     });
 }
