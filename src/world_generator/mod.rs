@@ -2,12 +2,13 @@ use bevy::{
     prelude::*,
     tasks::{AsyncComputeTaskPool, Task},
 };
-
 use futures_lite::future;
 use noise::{MultiFractal, NoiseFn, OpenSimplex, RidgedMulti};
+use std::io::Cursor;
+use zstd::stream::copy_decode;
 
 use crate::{
-    chunk::{ChunkData, ChunkPos, LoadedChunks},
+    chunk::{ChunkData, ChunkPos, Database, LoadedChunks},
     mesher::NeedsMesh,
     voxel::{VoxelPos, VOXEL_AIR, VOXEL_BEDROCK, VOXEL_GRASS, VOXEL_STONE},
 };
@@ -31,6 +32,7 @@ struct ComputeChunkData(Task<(Entity, ChunkPos, ChunkData)>);
 
 fn enqueue_chunk_generation_tasks(
     mut commands: Commands,
+    database: Res<Database>,
     needs_generation: Query<(Entity, &ChunkPos), With<NeedsChunkData>>,
 ) {
     if needs_generation.is_empty() {
@@ -49,8 +51,29 @@ fn enqueue_chunk_generation_tasks(
         .for_each(|(entity, pos)| {
             let pos = *pos;
             let noise = noise.clone();
+            let database = database.get_connection();
 
             let task = thread_pool.spawn(async move {
+                // TODO: Profile putting the connection in a RwLock
+                // It would hopefully reduce contention here
+                let database = database.lock().unwrap();
+                let stmt = database.prepare(
+                    "SELECT posx, posy, posz, data FROM blocks WHERE posx=:posx AND posy=:posy AND posz=:posz;",
+                );
+                if let Ok(mut stmt) = stmt {
+                    let chunk_result: Result<Vec<u8>, _> = stmt.query_row(
+                        &[(":posx", &pos.x), (":posy", &pos.y), (":posz", &pos.z)],
+                        |row| Ok(row.get(3).unwrap()),
+                    );
+                    if let Ok(chunk_row) = chunk_result {
+                        let mut temp_output = Cursor::new(Vec::new());
+                        copy_decode(&chunk_row[..], &mut temp_output).unwrap();
+                        let final_chunk = bincode::deserialize(temp_output.get_ref()).unwrap();
+
+                        return (entity, pos, ChunkData::from_raw(final_chunk));
+                    }
+                }
+
                 let mut chunk = ChunkData::default();
 
                 for z in 0..ChunkData::edge() {

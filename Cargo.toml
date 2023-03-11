@@ -16,7 +16,29 @@ opt-level = 3
 lto = true
 
 [features]
-default = ["bevy/bevy_winit", "bevy/bevy_render", "bevy/bevy_core_pipeline", "bevy/bevy_pbr", "bevy/bevy_sprite", "bevy/bevy_text", "bevy/bevy_ui", "bevy/bevy_asset", "bevy/png", "bevy/ktx2", "bevy/x11", "bevy/wayland", "bevy/filesystem_watcher", "bevy_kira_audio/wav", "bevy_rapier3d/dim3", "bevy_rapier3d/async-collider", "bevy_rapier3d/debug-render-3d", "bevy_rapier3d/simd-nightly", "bevy_rapier3d/parallel"]
+default = [
+  "bevy/bevy_winit",
+  "bevy/bevy_render",
+  "bevy/bevy_core_pipeline",
+  "bevy/bevy_pbr",
+  "bevy/bevy_sprite",
+  "bevy/bevy_text",
+  "bevy/bevy_ui",
+  "bevy/bevy_asset",
+  "bevy/png",
+  "bevy/ktx2",
+  "bevy/x11",
+  "bevy/wayland",
+  "bevy/filesystem_watcher",
+  "bevy_kira_audio/wav",
+  "bevy_rapier3d/dim3",
+  "bevy_rapier3d/async-collider",
+  "bevy_rapier3d/debug-render-3d",
+  "bevy_rapier3d/simd-nightly",
+  "bevy_rapier3d/parallel",
+  "bitvec/serde",
+  "rusqlite/bundled"
+]
 
 [dependencies]
 winit = "0.28.2"
@@ -31,3 +53,7 @@ noise = { git = "https://github.com/Razaekel/noise-rs.git" }
 rand = "0.8.5"
 ndshape = "0.3.0"
 itertools = "0.10.5"
+rusqlite = "0.28.0"
+serde = "1.0.152"
+bincode = "1.3.3"
+zstd = "0.12"

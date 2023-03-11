@@ -1,16 +1,17 @@
 use bitvec::prelude::*;
+use serde::{Deserialize, Serialize};
 
 use crate::voxel::Voxel;
 
 /// Adaptive compressed storage for voxel volume data
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub enum Storage {
     Single(SingleStorage),
     Multi(MultiStorage),
 }
 
 /// Compressed storage for volumes with a single voxel type
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct SingleStorage {
     size: usize,
     voxel: Voxel,
@@ -18,7 +19,7 @@ pub struct SingleStorage {
 
 /// Palette compressed storage for volumes with multiple voxel types
 /// Based on https://voxel.wiki/wiki/palette-compression/
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct MultiStorage {
     /// Size of chunk storage, in voxels
     size: usize,
@@ -210,13 +211,13 @@ impl Storage {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 struct PaletteEntry {
     voxel_type: Voxel,
     ref_count: usize,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 struct BitBuffer {
     bytes: BitVec<u8, Lsb0>,
 }

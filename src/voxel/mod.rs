@@ -1,3 +1,5 @@
+use serde::{Deserialize, Serialize};
+
 pub const VOXEL_SIZE: f32 = 2.0;
 
 pub const VOXEL_AIR: Voxel = Voxel::Empty;
@@ -9,7 +11,7 @@ mod position;
 pub use position::VoxelPos;
 
 #[allow(dead_code)]
-#[derive(Debug, Copy, Clone, Default, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Voxel {
     #[default]
     Empty,

@@ -2,8 +2,41 @@ use bevy::{
     prelude::{Component, Entity, Resource},
     utils::{HashMap, HashSet},
 };
+use rusqlite::Connection;
+use std::sync::{Arc, Mutex};
 
-use crate::chunk::{ChunkData, ChunkPos};
+use crate::chunk::ChunkPos;
+
+#[derive(Resource)]
+pub struct Database {
+    connection: Arc<Mutex<Connection>>,
+}
+
+impl Database {
+    pub fn new() -> Self {
+        let connection = Connection::open("worlds/world.db3").unwrap();
+        connection
+            .execute(
+                "create table if not exists blocks (
+                    posx integer not null,
+                    posy integer not null,
+                    posz integer not null,
+                    data blob,
+                 PRIMARY KEY (posx, posy, posz)
+                )",
+                [],
+            )
+            .unwrap();
+
+        Self {
+            connection: Arc::new(Mutex::new(connection)),
+        }
+    }
+
+    pub fn get_connection(&self) -> Arc<Mutex<Connection>> {
+        self.connection.clone()
+    }
+}
 
 #[derive(Component, Default)]
 pub struct LoadPoint {
@@ -27,15 +60,7 @@ impl LoadedChunks {
         self.chunks.insert(pos, entity);
     }
 
-    fn load(&mut self, _pos: ChunkPos) -> Option<ChunkData> {
-        // TODO: Load existing chunks from persistent storage
-        None
-    }
-
-    pub fn load_inside_range(
-        &mut self,
-        pos_lit: &[(ChunkPos, usize, usize)],
-    ) -> Vec<(ChunkPos, Option<ChunkData>)> {
+    pub fn load_inside_range(&mut self, pos_lit: &[(ChunkPos, usize, usize)]) -> Vec<ChunkPos> {
         let mut to_load = HashSet::new();
         for (pos, horizontal_distance, vertical_distance) in pos_lit.iter().copied() {
             for z in 0..=horizontal_distance * 2 {
@@ -65,10 +90,7 @@ impl LoadedChunks {
             }
         }
 
-        to_load
-            .into_iter()
-            .map(|pos| (pos, self.load(pos)))
-            .collect()
+        to_load.into_iter().collect()
     }
 
     fn unload(&mut self, pos: ChunkPos) -> Entity {
@@ -92,7 +114,6 @@ impl LoadedChunks {
         to_remove.into_iter().map(|pos| self.unload(pos)).collect()
     }
 
-    #[allow(dead_code)]
     pub fn get_chunk(&self, pos: ChunkPos) -> Option<&Entity> {
         self.chunks.get(&pos)
     }
