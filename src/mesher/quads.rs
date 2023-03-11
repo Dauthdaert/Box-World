@@ -50,6 +50,10 @@ impl QuadGroups {
 pub fn generate_quads_with_buffer(chunk_boundary: &ChunkBoundary, buffer: &mut QuadGroups) {
     buffer.clear();
 
+    let x_offset = ChunkBoundary::x_offset();
+    let y_offset = ChunkBoundary::y_offset();
+    let z_offset = ChunkBoundary::z_offset();
+
     let voxels = chunk_boundary.voxels();
     for z in 1..ChunkBoundary::edge() - 1 {
         for y in 1..ChunkBoundary::edge() - 1 {
@@ -57,9 +61,6 @@ pub fn generate_quads_with_buffer(chunk_boundary: &ChunkBoundary, buffer: &mut Q
                 let idx = ChunkBoundary::linearize(x, y, z);
                 let voxel = voxels[idx];
 
-                let x_offset = ChunkBoundary::x_offset();
-                let y_offset = ChunkBoundary::y_offset();
-                let z_offset = ChunkBoundary::z_offset();
                 match voxel.visibility() {
                     VoxelVisibility::Empty => continue,
                     visibility => {
