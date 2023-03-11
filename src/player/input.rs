@@ -15,7 +15,7 @@ use crate::{
     HORIZONTAL_VIEW_DISTANCE,
 };
 
-use super::{Player, PlayerBundle};
+use super::{Player, PostSpawnPlayerBundle};
 
 #[derive(Component)]
 pub struct FPSCamera {
@@ -37,6 +37,7 @@ impl Default for FPSCamera {
 pub fn spawn(
     mut commands: Commands,
     cameras: Query<Entity, With<Camera>>,
+    player: Query<Entity, With<Player>>,
     mut windows: Query<&mut Window, With<PrimaryWindow>>,
 ) {
     cameras
@@ -67,27 +68,32 @@ pub fn spawn(
             ..default()
         }
     };
-    commands.spawn(PlayerBundle::default()).with_children(|c| {
-        c.spawn((
-            GlobalTransform::default(),
-            Transform::from_xyz(0.0, 2.0, 0.0),
-            Collider::cylinder(1.6, 0.4),
-            SolverGroups::new(Group::GROUP_1, Group::GROUP_2),
-            CollisionGroups::new(Group::GROUP_1, Group::GROUP_2),
-        ));
-        c.spawn((
-            FPSCamera::default(),
-            camera,
-            FogSettings {
-                color: Color::rgba(0.5, 0.5, 0.5, 1.0),
-                falloff: FogFalloff::Linear {
-                    start: ((HORIZONTAL_VIEW_DISTANCE - 4) * CHUNK_EDGE) as f32 * VOXEL_SIZE,
-                    end: ((HORIZONTAL_VIEW_DISTANCE - 2) * CHUNK_EDGE) as f32 * VOXEL_SIZE,
+
+    let player_entity = player.single();
+    commands
+        .entity(player_entity)
+        .insert(PostSpawnPlayerBundle::default())
+        .with_children(|c| {
+            c.spawn((
+                GlobalTransform::default(),
+                Transform::from_xyz(0.0, 2.0, 0.0),
+                Collider::cylinder(1.6, 0.4),
+                SolverGroups::new(Group::GROUP_1, Group::GROUP_2),
+                CollisionGroups::new(Group::GROUP_1, Group::GROUP_2),
+            ));
+            c.spawn((
+                FPSCamera::default(),
+                camera,
+                FogSettings {
+                    color: Color::rgba(0.5, 0.5, 0.5, 1.0),
+                    falloff: FogFalloff::Linear {
+                        start: ((HORIZONTAL_VIEW_DISTANCE - 4) * CHUNK_EDGE) as f32 * VOXEL_SIZE,
+                        end: ((HORIZONTAL_VIEW_DISTANCE - 2) * CHUNK_EDGE) as f32 * VOXEL_SIZE,
+                    },
+                    ..default()
                 },
-                ..default()
-            },
-        ));
-    });
+            ));
+        });
 }
 
 #[derive(Resource)]

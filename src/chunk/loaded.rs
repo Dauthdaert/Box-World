@@ -5,7 +5,7 @@ use bevy::{
 
 use crate::chunk::{ChunkData, ChunkPos};
 
-#[derive(Component)]
+#[derive(Component, Default)]
 pub struct LoadPoint;
 
 #[derive(Resource)]

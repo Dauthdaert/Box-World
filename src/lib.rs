@@ -10,8 +10,9 @@ use bevy::{
     window::PresentMode,
 };
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
-use chunk::LoadPoint;
+use chunk::{ChunkData, ChunkPos, LoadPoint, LoadedChunks};
 use mesher::RapierSlowdownWorkaround;
+use player::Player;
 use states::GameStates;
 
 mod chunk;
@@ -109,17 +110,35 @@ impl LoadingTimer {
 
 fn transition_after_load(
     mut next_state: ResMut<NextState<GameStates>>,
-    chunks: Query<(), (With<Handle<Mesh>>, Without<RapierSlowdownWorkaround>)>,
+    loaded_chunks: Res<LoadedChunks>,
+    player: Query<&Transform, With<Player>>,
+    chunks: Query<(), (With<ChunkData>, Without<RapierSlowdownWorkaround>)>,
     time: Res<Time>,
     mut loading_timer: ResMut<LoadingTimer>,
 ) {
     if loading_timer.0.tick(time.delta()).just_finished() {
-        if time.elapsed_seconds() > 10. && chunks.iter().count() > 60 * 60 {
-            next_state.set(GameStates::InGame);
-            info!("Done loading!");
-        } else {
-            info!("Don't worry, we're still loading.");
+        info!("Don't worry, we're still loading.");
+
+        let player = player.single().translation;
+        let player_chunk_pos = ChunkPos::from_global_coords(player.x, player.y, player.z);
+
+        // Check current chunk
+        let Some(current) = loaded_chunks.get_chunk(player_chunk_pos) else { return; };
+        if chunks.get(*current).is_err() {
+            return;
         }
+
+        // Check neighbor chunks
+        for neighbor in ChunkPos::neighbors(&player_chunk_pos) {
+            let Some(neighbor) = loaded_chunks.get_chunk(neighbor) else { return; };
+            if chunks.get(*neighbor).is_err() {
+                return;
+            }
+        }
+
+        // All important chunks loaded
+        next_state.set(GameStates::InGame);
+        info!("Done loading!");
     }
 }
 

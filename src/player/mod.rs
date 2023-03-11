@@ -23,6 +23,8 @@ impl Plugin for PlayerPlugin {
             });
         app.insert_resource(MouseSensitivity(1.0));
 
+        app.add_startup_system(setup);
+
         app.add_system(input::spawn.in_schedule(OnEnter(GameStates::InGame)));
 
         app.add_systems(
@@ -37,31 +39,34 @@ impl Plugin for PlayerPlugin {
     }
 }
 
-#[derive(Component)]
-struct Player;
+#[derive(Component, Default)]
+pub struct Player;
 
 #[derive(Bundle)]
-struct PlayerBundle {
+struct PreSpawnPlayerBundle {
     pub player: Player,
     pub load_point: LoadPoint,
-    #[bundle]
-    pub collider: ColliderBundle,
     #[bundle]
     pub spatial: SpatialBundle,
 }
 
-impl Default for PlayerBundle {
+impl Default for PreSpawnPlayerBundle {
     fn default() -> Self {
         Self {
             player: Player,
             load_point: LoadPoint,
-            collider: ColliderBundle::default(),
             spatial: SpatialBundle {
                 transform: Transform::from_xyz(10000., 400., 10000.),
                 ..default()
             },
         }
     }
+}
+
+#[derive(Bundle, Default)]
+struct PostSpawnPlayerBundle {
+    #[bundle]
+    pub collider: ColliderBundle,
 }
 
 #[derive(Bundle)]
@@ -92,4 +97,8 @@ impl Default for ColliderBundle {
             density: ColliderMassProperties::default(),
         }
     }
+}
+
+fn setup(mut commands: Commands) {
+    commands.spawn(PreSpawnPlayerBundle::default());
 }
