@@ -1,12 +1,22 @@
-use crate::{chunk::LoadPoint, states::GameStates};
-use bevy::prelude::*;
+use crate::{
+    chunk::{LoadPoint, CHUNK_EDGE},
+    states::GameStates,
+    voxel::VOXEL_SIZE,
+    HORIZONTAL_VIEW_DISTANCE, VERTICAL_VIEW_DISTANCE,
+};
+use bevy::{
+    prelude::*,
+    render::{camera::CameraProjection, primitives::Frustum},
+    window::{CursorGrabMode, PrimaryWindow},
+};
 use bevy_rapier3d::prelude::{
-    Collider, ColliderMassProperties, CollidingEntities, CollisionGroups, Friction, Group,
-    LockedAxes, NoUserData, RapierConfiguration, RapierPhysicsPlugin, RigidBody, Velocity,
+    Collider, CollisionGroups, Group, NoUserData, RapierConfiguration, RapierPhysicsPlugin,
+    SolverGroups,
 };
 
-use self::input::MouseSensitivity;
+use self::input::{FPSCamera, MouseSensitivity};
 
+mod bundle;
 mod collision;
 mod input;
 
@@ -23,9 +33,9 @@ impl Plugin for PlayerPlugin {
             });
         app.insert_resource(MouseSensitivity(1.0));
 
-        app.add_startup_system(setup);
+        app.add_startup_system(spawn_player_load_point);
 
-        app.add_system(input::spawn.in_schedule(OnEnter(GameStates::InGame)));
+        app.add_system(spawn_player_cam_and_collider.in_schedule(OnEnter(GameStates::InGame)));
 
         app.add_systems(
             (
@@ -42,63 +52,78 @@ impl Plugin for PlayerPlugin {
 #[derive(Component, Default)]
 pub struct Player;
 
-#[derive(Bundle)]
-struct PreSpawnPlayerBundle {
-    pub player: Player,
-    pub load_point: LoadPoint,
-    #[bundle]
-    pub spatial: SpatialBundle,
+fn spawn_player_load_point(mut commands: Commands) {
+    // Initially only load a small area around the player for speed
+    // We will load to view distance after spawning
+    commands.spawn(bundle::PreSpawnPlayerBundle::new(
+        16,
+        10,
+        Vec3::new(10000., 400., 10000.),
+    ));
 }
 
-impl Default for PreSpawnPlayerBundle {
-    fn default() -> Self {
-        Self {
-            player: Player,
-            load_point: LoadPoint,
-            spatial: SpatialBundle {
-                transform: Transform::from_xyz(10000., 400., 10000.),
-                ..default()
-            },
+pub fn spawn_player_cam_and_collider(
+    mut commands: Commands,
+    cameras: Query<Entity, With<Camera>>,
+    player: Query<Entity, With<Player>>,
+    mut windows: Query<&mut Window, With<PrimaryWindow>>,
+) {
+    cameras
+        .iter()
+        .for_each(|entity| commands.entity(entity).despawn_recursive());
+
+    let mut window = windows.get_single_mut().unwrap();
+    window.cursor.grab_mode = CursorGrabMode::Locked;
+    window.cursor.visible = false;
+
+    let camera = {
+        let perspective_projection = PerspectiveProjection {
+            fov: std::f32::consts::PI / 1.8,
+            near: 0.001,
+            far: 1000.0,
+            aspect_ratio: 1.0,
+        };
+        let view_projection = perspective_projection.get_projection_matrix();
+        let frustum = Frustum::from_view_projection_custom_far(
+            &view_projection,
+            &Vec3::ZERO,
+            &Vec3::Z,
+            perspective_projection.far(),
+        );
+        Camera3dBundle {
+            projection: Projection::Perspective(perspective_projection),
+            frustum,
+            ..default()
         }
-    }
-}
+    };
 
-#[derive(Bundle, Default)]
-struct PostSpawnPlayerBundle {
-    #[bundle]
-    pub collider: ColliderBundle,
-}
-
-#[derive(Bundle)]
-struct ColliderBundle {
-    pub colliding_entities: CollidingEntities,
-    pub collider: Collider,
-    pub rigid_body: RigidBody,
-    pub velocity: Velocity,
-    pub friction: Friction,
-    pub density: ColliderMassProperties,
-    pub rotation_constraints: LockedAxes,
-    pub collision_groups: CollisionGroups,
-}
-
-impl Default for ColliderBundle {
-    fn default() -> Self {
-        Self {
-            collider: Collider::capsule_y(2., 1.5),
-            rigid_body: RigidBody::KinematicVelocityBased,
-            rotation_constraints: LockedAxes::ROTATION_LOCKED,
-            collision_groups: CollisionGroups::new(
-                Group::GROUP_1,
-                Group::from_bits_truncate(Group::GROUP_2.bits()),
-            ),
-            colliding_entities: CollidingEntities::default(),
-            velocity: Velocity::default(),
-            friction: Friction::default(),
-            density: ColliderMassProperties::default(),
-        }
-    }
-}
-
-fn setup(mut commands: Commands) {
-    commands.spawn(PreSpawnPlayerBundle::default());
+    let player_entity = player.single();
+    commands
+        .entity(player_entity)
+        .insert(LoadPoint {
+            horizontal: HORIZONTAL_VIEW_DISTANCE,
+            vertical: VERTICAL_VIEW_DISTANCE,
+        })
+        .insert(bundle::PostSpawnPlayerBundle::default())
+        .with_children(|c| {
+            c.spawn((
+                GlobalTransform::default(),
+                Transform::from_xyz(0.0, 2.0, 0.0),
+                Collider::cylinder(1.6, 0.4),
+                SolverGroups::new(Group::GROUP_1, Group::GROUP_2),
+                CollisionGroups::new(Group::GROUP_1, Group::GROUP_2),
+            ));
+            c.spawn((
+                FPSCamera::default(),
+                camera,
+                FogSettings {
+                    color: Color::rgba(0.5, 0.5, 0.5, 1.0),
+                    falloff: FogFalloff::Linear {
+                        start: ((HORIZONTAL_VIEW_DISTANCE - 4) * CHUNK_EDGE) as f32 * VOXEL_SIZE,
+                        end: ((HORIZONTAL_VIEW_DISTANCE - 2) * CHUNK_EDGE) as f32 * VOXEL_SIZE,
+                    },
+                    ..default()
+                },
+            ));
+        });
 }

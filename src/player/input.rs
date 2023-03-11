@@ -3,19 +3,17 @@ use std::f32::consts::{FRAC_PI_2, PI};
 use bevy::{
     input::mouse::MouseMotion,
     prelude::*,
-    render::{camera::CameraProjection, primitives::Frustum},
     window::{CursorGrabMode, PrimaryWindow},
 };
-use bevy_rapier3d::prelude::{Collider, CollisionGroups, Group, SolverGroups, Vect};
+use bevy_rapier3d::prelude::Vect;
 
 use crate::{
-    chunk::{ChunkData, ChunkPos, LoadedChunks, CHUNK_EDGE},
+    chunk::{ChunkData, ChunkPos, LoadedChunks},
     mesher::NeedsMesh,
     voxel::{Voxel, VoxelPos, VOXEL_SIZE, VOXEL_STONE},
-    HORIZONTAL_VIEW_DISTANCE,
 };
 
-use super::{Player, PostSpawnPlayerBundle};
+use super::Player;
 
 #[derive(Component)]
 pub struct FPSCamera {
@@ -32,68 +30,6 @@ impl Default for FPSCamera {
             velocity: Vect::ZERO,
         }
     }
-}
-
-pub fn spawn(
-    mut commands: Commands,
-    cameras: Query<Entity, With<Camera>>,
-    player: Query<Entity, With<Player>>,
-    mut windows: Query<&mut Window, With<PrimaryWindow>>,
-) {
-    cameras
-        .iter()
-        .for_each(|entity| commands.entity(entity).despawn_recursive());
-
-    let mut window = windows.get_single_mut().unwrap();
-    window.cursor.grab_mode = CursorGrabMode::Locked;
-    window.cursor.visible = false;
-
-    let camera = {
-        let perspective_projection = PerspectiveProjection {
-            fov: std::f32::consts::PI / 1.8,
-            near: 0.001,
-            far: 1000.0,
-            aspect_ratio: 1.0,
-        };
-        let view_projection = perspective_projection.get_projection_matrix();
-        let frustum = Frustum::from_view_projection_custom_far(
-            &view_projection,
-            &Vec3::ZERO,
-            &Vec3::Z,
-            perspective_projection.far(),
-        );
-        Camera3dBundle {
-            projection: Projection::Perspective(perspective_projection),
-            frustum,
-            ..default()
-        }
-    };
-
-    let player_entity = player.single();
-    commands
-        .entity(player_entity)
-        .insert(PostSpawnPlayerBundle::default())
-        .with_children(|c| {
-            c.spawn((
-                GlobalTransform::default(),
-                Transform::from_xyz(0.0, 2.0, 0.0),
-                Collider::cylinder(1.6, 0.4),
-                SolverGroups::new(Group::GROUP_1, Group::GROUP_2),
-                CollisionGroups::new(Group::GROUP_1, Group::GROUP_2),
-            ));
-            c.spawn((
-                FPSCamera::default(),
-                camera,
-                FogSettings {
-                    color: Color::rgba(0.5, 0.5, 0.5, 1.0),
-                    falloff: FogFalloff::Linear {
-                        start: ((HORIZONTAL_VIEW_DISTANCE - 4) * CHUNK_EDGE) as f32 * VOXEL_SIZE,
-                        end: ((HORIZONTAL_VIEW_DISTANCE - 2) * CHUNK_EDGE) as f32 * VOXEL_SIZE,
-                    },
-                    ..default()
-                },
-            ));
-        });
 }
 
 #[derive(Resource)]

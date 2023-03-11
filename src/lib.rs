@@ -95,7 +95,10 @@ fn setup(mut commands: Commands) {
             local: Transform::from_xyz(10000., 400., 10000.),
             ..default()
         },
-        LoadPoint,
+        LoadPoint {
+            horizontal: 8,
+            vertical: 4,
+        },
     ));
 }
 

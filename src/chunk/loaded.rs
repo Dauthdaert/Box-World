@@ -6,7 +6,10 @@ use bevy::{
 use crate::chunk::{ChunkData, ChunkPos};
 
 #[derive(Component, Default)]
-pub struct LoadPoint;
+pub struct LoadPoint {
+    pub horizontal: usize,
+    pub vertical: usize,
+}
 
 #[derive(Resource)]
 pub struct LoadedChunks {
@@ -31,15 +34,13 @@ impl LoadedChunks {
 
     pub fn load_inside_range(
         &mut self,
-        pos_lit: &[ChunkPos],
-        horizontal_distance: usize,
-        vertical_distance: usize,
+        pos_lit: &[(ChunkPos, usize, usize)],
     ) -> Vec<(ChunkPos, Option<ChunkData>)> {
         let mut to_load = HashSet::new();
-        for z in 0..=horizontal_distance * 2 {
-            for y in 0..=vertical_distance * 2 {
-                for x in 0..=horizontal_distance * 2 {
-                    for pos in pos_lit {
+        for (pos, horizontal_distance, vertical_distance) in pos_lit.iter().copied() {
+            for z in 0..=horizontal_distance * 2 {
+                for y in 0..=vertical_distance * 2 {
+                    for x in 0..=horizontal_distance * 2 {
                         if pos.x + x < horizontal_distance
                             || pos.y + y < vertical_distance
                             || pos.z + z < horizontal_distance
@@ -77,12 +78,12 @@ impl LoadedChunks {
             .expect("Chunk should exist at ChunkPos for unloading")
     }
 
-    pub fn unload_outside_range(&mut self, pos_list: &[ChunkPos], distance: usize) -> Vec<Entity> {
+    pub fn unload_outside_range(&mut self, pos_list: &[(ChunkPos, usize, usize)]) -> Vec<Entity> {
         let mut to_remove = Vec::new();
         self.chunks.keys().for_each(|other_pos| {
             if pos_list
                 .iter()
-                .all(|pos| pos.distance(other_pos) > distance as f32)
+                .all(|(pos, horizontal, _vertical)| pos.distance(other_pos) > *horizontal as f32)
             {
                 to_remove.push(*other_pos);
             }

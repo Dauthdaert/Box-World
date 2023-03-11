@@ -1,6 +1,5 @@
 use crate::mesher::NeedsMesh;
 use crate::world_generator::NeedsChunkData;
-use crate::{HORIZONTAL_VIEW_DISTANCE, VERTICAL_VIEW_DISTANCE};
 use bevy::prelude::*;
 use rand::seq::IteratorRandom;
 
@@ -41,27 +40,33 @@ fn periodic_chunk_trim(mut chunks: Query<&mut ChunkData>) {
 fn load_around_load_points(
     mut commands: Commands,
     mut world: ResMut<LoadedChunks>,
-    load_query: Query<Ref<Transform>, With<loaded::LoadPoint>>,
+    load_query: Query<(Ref<Transform>, &LoadPoint)>,
 ) {
     let mut load_pos = Vec::new();
-    for load_transform in load_query.iter() {
+    for (load_transform, load_distance) in load_query.iter() {
         let load_translation = load_transform.translation;
         let load_chunk_pos = ChunkPos::from_global_coords(
             load_translation.x,
             load_translation.y,
             load_translation.z,
         );
-        load_pos.push(load_chunk_pos);
+        load_pos.push((
+            load_chunk_pos,
+            load_distance.horizontal,
+            load_distance.vertical,
+        ));
     }
 
-    if load_query.iter().any(|transform| transform.is_changed()) {
-        let unloaded_chunks = world.unload_outside_range(&load_pos, HORIZONTAL_VIEW_DISTANCE);
+    if load_query
+        .iter()
+        .any(|(transform, _distance)| transform.is_changed())
+    {
+        let unloaded_chunks = world.unload_outside_range(&load_pos);
         for entity in unloaded_chunks.iter() {
             commands.entity(*entity).despawn_recursive();
         }
 
-        let loaded_chunks =
-            world.load_inside_range(&load_pos, HORIZONTAL_VIEW_DISTANCE, VERTICAL_VIEW_DISTANCE);
+        let loaded_chunks = world.load_inside_range(&load_pos);
         for (pos, chunk) in loaded_chunks.into_iter() {
             let entity = if let Some(chunk) = chunk {
                 commands.spawn((pos, chunk, NeedsMesh)).id()
