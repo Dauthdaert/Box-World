@@ -9,8 +9,9 @@ use bevy::{
 use bevy_rapier3d::prelude::{Collider, CollisionGroups, Group, SolverGroups, Vect};
 
 use crate::{
-    chunk::{ChunkPos, LoadedChunks, CHUNK_EDGE},
-    voxel::VOXEL_SIZE,
+    chunk::{ChunkData, ChunkPos, LoadedChunks, CHUNK_EDGE},
+    mesher::NeedsMesh,
+    voxel::{Voxel, VoxelPos, VOXEL_SIZE, VOXEL_STONE},
     HORIZONTAL_VIEW_DISTANCE,
 };
 
@@ -93,7 +94,7 @@ pub fn spawn(
 pub struct MouseSensitivity(pub f32);
 
 #[allow(clippy::too_many_arguments)]
-pub(super) fn movement_input_system(
+pub(super) fn movement_input(
     mut player: Query<&mut FPSCamera>,
     player_position: Query<&Transform, With<Player>>,
     camera_transform: Query<&Transform, With<Camera>>,
@@ -188,6 +189,73 @@ pub(super) fn movement_input_system(
             }
 
             fps_camera.velocity.y -= 35.0 * time.delta().as_secs_f32().clamp(0.0, 0.1);
+        }
+    }
+}
+
+pub(super) fn interact(
+    mut commands: Commands,
+    loaded_chunks: Res<LoadedChunks>,
+    mouse_input: Res<Input<MouseButton>>,
+    window: Query<&Window, With<PrimaryWindow>>,
+    camera: Query<(&Camera, &GlobalTransform)>,
+    mut chunks: Query<&mut ChunkData>,
+) {
+    let window = window.single();
+
+    // Do nothing if player insn't focused
+    if window.cursor.grab_mode != CursorGrabMode::Locked {
+        return;
+    }
+
+    let cursor_position = Vec2::new(window.width() / 2., window.height() / 2.);
+
+    for (camera, camera_transform) in camera.iter() {
+        let Some(ray) = camera.viewport_to_world(camera_transform, cursor_position) else { return; };
+
+        for i in 1..5 {
+            let ray_pos = ray.get_point(i as f32 * VOXEL_SIZE);
+            let voxel_pos = VoxelPos::from_global_coords(ray_pos.x, ray_pos.y, ray_pos.z);
+            let (chunk_pos, local_x, local_y, local_z) = voxel_pos.to_chunk_coords();
+
+            let Some(chunk_entity) = loaded_chunks.get_chunk(chunk_pos) else { continue; };
+            let Ok(mut chunk_data) = chunks.get_mut(*chunk_entity) else { continue; };
+
+            let changed = if mouse_input.just_pressed(MouseButton::Left) {
+                if chunk_data.get(local_x, local_y, local_z) != Voxel::Empty {
+                    chunk_data.set(local_x, local_y, local_z, Voxel::Empty);
+                    true
+                } else {
+                    false
+                }
+            } else if mouse_input.just_pressed(MouseButton::Right) {
+                // FIXME: Place on existing voxel surface
+                if chunk_data.get(local_x, local_y, local_z) != Voxel::Empty {
+                    // Place in previous spot
+                    let ray_pos = ray.get_point((i - 1) as f32 * VOXEL_SIZE);
+                    let voxel_pos = VoxelPos::from_global_coords(ray_pos.x, ray_pos.y, ray_pos.z);
+                    let (chunk_pos, local_x, local_y, local_z) = voxel_pos.to_chunk_coords();
+
+                    let Some(chunk_entity) = loaded_chunks.get_chunk(chunk_pos) else { continue; };
+                    let Ok(mut chunk_data) = chunks.get_mut(*chunk_entity) else { continue; };
+                    chunk_data.set(local_x, local_y, local_z, VOXEL_STONE);
+                    true
+                } else {
+                    false
+                }
+            } else {
+                false
+            };
+
+            if changed {
+                commands.entity(*chunk_entity).insert(NeedsMesh);
+                for neighbor in loaded_chunks.get_loaded_chunk_neighbors(chunk_pos) {
+                    commands.entity(neighbor).insert(NeedsMesh);
+                }
+
+                // Stop ray casting
+                break;
+            }
         }
     }
 }

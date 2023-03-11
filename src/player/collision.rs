@@ -4,7 +4,7 @@ use bevy_rapier3d::prelude::{Collider, CollisionGroups, Group, QueryFilter, Rapi
 
 use super::{input::FPSCamera, Player};
 
-pub(super) fn movement_system(
+pub(super) fn movement(
     mut camera: Query<(Entity, &mut FPSCamera)>,
     player: Query<Entity, With<Player>>,
     mut transforms: Query<&mut Transform>,

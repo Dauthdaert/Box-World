@@ -23,10 +23,17 @@ impl Plugin for PlayerPlugin {
             });
         app.insert_resource(MouseSensitivity(1.0));
 
-        app.add_system(input::spawn.in_schedule(OnEnter(GameStates::InGame)))
-            .add_system(input::movement_input_system.in_set(OnUpdate(GameStates::InGame)));
+        app.add_system(input::spawn.in_schedule(OnEnter(GameStates::InGame)));
 
-        app.add_system(collision::movement_system.in_set(OnUpdate(GameStates::InGame)));
+        app.add_systems(
+            (
+                input::movement_input,
+                input::interact.after(collision::movement),
+            )
+                .in_set(OnUpdate(GameStates::InGame)),
+        );
+
+        app.add_system(collision::movement.in_set(OnUpdate(GameStates::InGame)));
     }
 }
 
