@@ -11,7 +11,7 @@ use bevy::{
 };
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use chunk::{ChunkData, ChunkPos, LoadPoint, LoadedChunks};
-use mesher::RapierSlowdownWorkaround;
+use mesher::NeedsMesh;
 use player::Player;
 use states::GameStates;
 
@@ -112,7 +112,7 @@ fn transition_after_load(
     mut next_state: ResMut<NextState<GameStates>>,
     loaded_chunks: Res<LoadedChunks>,
     player: Query<&Transform, With<Player>>,
-    chunks: Query<(), (With<ChunkData>, Without<RapierSlowdownWorkaround>)>,
+    chunks: Query<(), (With<ChunkData>, Without<NeedsMesh>)>,
     time: Res<Time>,
     mut loading_timer: ResMut<LoadingTimer>,
 ) {
