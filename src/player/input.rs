@@ -171,16 +171,26 @@ pub(super) fn interact(
                     false
                 }
             } else if mouse_input.just_pressed(MouseButton::Right) {
-                // FIXME: Place on existing voxel surface
                 if chunk_data.get(local_x, local_y, local_z) != Voxel::Empty {
                     // Place in previous spot
-                    let ray_pos = ray.get_point((i - 1) as f32 * VOXEL_SIZE);
-                    let voxel_pos = VoxelPos::from_global_coords(ray_pos.x, ray_pos.y, ray_pos.z);
-                    let (chunk_pos, local_x, local_y, local_z) = voxel_pos.to_chunk_coords();
+                    let prev_ray_pos = ray.get_point((i - 1) as f32 * VOXEL_SIZE);
+                    let prev_voxel_pos = VoxelPos::from_global_coords(
+                        prev_ray_pos.x,
+                        prev_ray_pos.y,
+                        prev_ray_pos.z,
+                    );
+                    let (prev_chunk_pos, prev_local_x, prev_local_y, prev_local_z) =
+                        prev_voxel_pos.to_chunk_coords();
 
-                    let Some(chunk_entity) = loaded_chunks.get_chunk(chunk_pos) else { continue; };
-                    let Ok(mut chunk_data) = chunks.get_mut(*chunk_entity) else { continue; };
-                    chunk_data.set(local_x, local_y, local_z, VOXEL_STONE);
+                    let mut prev_chunk_data = if chunk_pos == prev_chunk_pos {
+                        chunk_data
+                    } else {
+                        let Some(chunk_entity) = loaded_chunks.get_chunk(prev_chunk_pos) else { continue; };
+                        let Ok(chunk_data) = chunks.get_mut(*chunk_entity) else { continue; };
+                        chunk_data
+                    };
+                    prev_chunk_data.set(prev_local_x, prev_local_y, prev_local_z, VOXEL_STONE);
+
                     true
                 } else {
                     false
