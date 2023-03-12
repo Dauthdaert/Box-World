@@ -9,6 +9,7 @@ use bevy::{
     render::{camera::CameraProjection, primitives::Frustum},
     window::{CursorGrabMode, PrimaryWindow},
 };
+use bevy_atmosphere::prelude::AtmosphereCamera;
 use bevy_rapier3d::prelude::{
     Collider, CollisionGroups, Group, NoUserData, RapierConfiguration, RapierPhysicsPlugin,
     SolverGroups,
@@ -116,6 +117,7 @@ pub fn spawn_player_cam_and_collider(
             c.spawn((
                 FPSCamera::default(),
                 camera,
+                AtmosphereCamera::default(),
                 FogSettings {
                     color: Color::rgba(0.5, 0.5, 0.5, 1.0),
                     falloff: FogFalloff::Linear {

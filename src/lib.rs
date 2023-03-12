@@ -16,6 +16,7 @@ use player::Player;
 use states::GameStates;
 
 mod chunk;
+mod environment;
 mod mesher;
 mod player;
 mod states;
@@ -76,16 +77,12 @@ pub fn app() -> App {
     app.add_plugin(chunk::ChunkPlugin);
     app.add_plugin(mesher::MesherPlugin);
     app.add_plugin(player::PlayerPlugin);
+    app.add_plugin(environment::EnvironmentPlugin);
 
     app
 }
 
 fn setup(mut commands: Commands) {
-    commands.insert_resource(AmbientLight {
-        color: Color::WHITE,
-        brightness: 0.8,
-    });
-
     commands.spawn((
         /*Camera3dBundle {
             transform: Transform::from_xyz(10000., 400., 10000.),
