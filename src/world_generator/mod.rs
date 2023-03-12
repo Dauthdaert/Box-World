@@ -54,8 +54,6 @@ fn enqueue_chunk_generation_tasks(
             let database = database.get_connection();
 
             let task = thread_pool.spawn(async move {
-                // TODO: Profile putting the connection in a RwLock
-                // It would hopefully reduce contention here
                 let database = database.lock().unwrap();
                 let stmt = database.prepare(
                     "SELECT posx, posy, posz, data FROM blocks WHERE posx=:posx AND posy=:posy AND posz=:posz;",
