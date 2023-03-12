@@ -3,9 +3,9 @@ use serde::{Deserialize, Serialize};
 pub const VOXEL_SIZE: f32 = 2.0;
 
 pub const VOXEL_AIR: Voxel = Voxel::Empty;
-pub const VOXEL_BEDROCK: Voxel = Voxel::Opaque(0);
-pub const VOXEL_GRASS: Voxel = Voxel::Opaque(1);
-pub const VOXEL_STONE: Voxel = Voxel::Opaque(5);
+pub const VOXEL_BEDROCK: Voxel = Voxel::Opaque(1);
+pub const VOXEL_GRASS: Voxel = Voxel::Opaque(2);
+pub const VOXEL_STONE: Voxel = Voxel::Opaque(6);
 
 mod position;
 pub use position::VoxelPos;
