@@ -51,7 +51,8 @@ pub fn app() -> App {
                 watch_for_changes: true,
                 ..default()
             }),
-    );
+    )
+    .insert_resource(Msaa::Sample8);
 
     #[cfg(debug_assertions)]
     {
