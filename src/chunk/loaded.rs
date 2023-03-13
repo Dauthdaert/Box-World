@@ -125,12 +125,19 @@ impl LoadedChunks {
             .collect()
     }
 
-    pub fn get_unique_loaded_chunk_neighbors(&self, pos_list: &[ChunkPos]) -> Vec<Entity> {
-        let set: HashSet<Entity> = pos_list
+    pub fn get_unique_loaded_chunks_and_neighbors(&self, pos_list: &[ChunkPos]) -> Vec<Entity> {
+        let mut set: HashSet<Entity> = pos_list
+            .iter()
+            .filter_map(|pos| self.chunks.get(pos).copied())
+            .collect();
+        pos_list
             .iter()
             .flat_map(|pos| pos.neighbors())
             .filter_map(|pos| self.chunks.get(&pos).copied())
-            .collect();
+            .for_each(|entity| {
+                set.insert(entity);
+            });
+
         set.into_iter().collect()
     }
 }

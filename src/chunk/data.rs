@@ -6,7 +6,7 @@ use crate::voxel::Voxel;
 
 use super::storage::Storage;
 
-pub const CHUNK_EDGE: usize = 16;
+const CHUNK_EDGE: usize = 16;
 type ChunkShape = ConstShape3usize<CHUNK_EDGE, CHUNK_EDGE, CHUNK_EDGE>;
 
 #[derive(Serialize, Deserialize)]

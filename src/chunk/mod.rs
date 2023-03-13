@@ -1,8 +1,3 @@
-use rusqlite::params;
-use rusqlite::Connection;
-use std::io::Cursor;
-use zstd::stream::copy_encode;
-
 use crate::world_generator::NeedsChunkData;
 use bevy::app::AppExit;
 use bevy::prelude::*;
@@ -10,15 +5,14 @@ use bevy::tasks::AsyncComputeTaskPool;
 use rand::seq::IteratorRandom;
 
 mod data;
+mod database;
 mod loaded;
 mod position;
 mod storage;
 
-pub use data::{ChunkData, CHUNK_EDGE};
+pub use data::ChunkData;
 pub use loaded::{Database, LoadPoint, LoadedChunks};
 pub use position::ChunkPos;
-
-use data::RawChunk;
 
 pub struct ChunkPlugin;
 
@@ -77,26 +71,38 @@ fn load_around_load_points(
         .iter()
         .any(|(transform, _distance)| transform.is_changed())
     {
-        let thread_pool = AsyncComputeTaskPool::get();
-        let unloaded_chunks = world.unload_outside_range(&load_pos);
-        for entity in unloaded_chunks.iter() {
-            if let Ok((chunk_pos, chunk_data)) = chunks.get(*entity) {
+        {
+            let _span = info_span!("Unloading chunks").entered();
+            let unloaded_chunks = world.unload_outside_range(&load_pos);
+            let mut to_save = Vec::new();
+            for entity in unloaded_chunks.iter() {
+                if let Ok((chunk_pos, chunk_data)) = chunks.get(*entity) {
+                    if chunk_data.is_dirty() {
+                        to_save.push((*chunk_pos, chunk_data.to_raw()));
+                    }
+                }
+                commands.entity(*entity).despawn();
+            }
+
+            if !to_save.is_empty() {
+                let thread_pool = AsyncComputeTaskPool::get();
                 let connection_lock = database.get_connection();
-                let chunk_pos = *chunk_pos;
-                let chunk_data = chunk_data.to_raw();
                 thread_pool
                     .spawn(async move {
-                        save_chunk(&connection_lock.lock().unwrap(), &chunk_pos, &chunk_data);
+                        info!("Saving {} unloaded chunks", to_save.len());
+                        database::save_raw_chunks(&connection_lock, to_save);
                     })
                     .detach();
             }
-            commands.entity(*entity).despawn_recursive();
         }
 
-        let loaded_chunks = world.load_inside_range(&load_pos);
-        for pos in loaded_chunks.into_iter() {
-            let entity = commands.spawn((pos, NeedsChunkData)).id();
-            world.set(pos, entity);
+        {
+            let _span = info_span!("Loading chunks").entered();
+            let loaded_chunks = world.load_inside_range(&load_pos);
+            for pos in loaded_chunks.into_iter() {
+                let entity = commands.spawn((pos, NeedsChunkData)).id();
+                world.set(pos, entity);
+            }
         }
     }
 }
@@ -124,7 +130,7 @@ fn autosave_chunks(
         for (chunk_pos, mut chunk_data) in chunks
             .iter_mut()
             .filter(|(_pos, data)| data.is_dirty())
-            .take(20000)
+            .take(5000)
         {
             chunk_data.set_dirty(false);
             chunks_cloned.push((*chunk_pos, chunk_data.to_raw()));
@@ -134,14 +140,7 @@ fn autosave_chunks(
         let connection_lock = database.get_connection();
         thread_pool
             .spawn(async move {
-                // Save all chunks in a single transaction
-                let connection = connection_lock.lock().unwrap();
-                connection.execute("BEGIN;", []).unwrap();
-                for (chunk_pos, chunk_data) in chunks_cloned.iter() {
-                    save_chunk(&connection, chunk_pos, chunk_data);
-                }
-                connection.execute("COMMIT;", []).unwrap();
-
+                database::save_raw_chunks(&connection_lock, chunks_cloned);
                 info!("Done autosaving");
             })
             .detach();
@@ -151,39 +150,24 @@ fn autosave_chunks(
 fn save_chunks_on_close(
     exit: EventReader<AppExit>,
     database: Res<Database>,
-    mut chunks: Query<(&ChunkPos, &mut ChunkData)>,
+    chunks: Query<(&ChunkPos, &ChunkData)>,
 ) {
     if !exit.is_empty() {
         info!("Save on close");
 
-        // Save all chunks in a single transaction
         let connection_lock = database.get_connection();
-        let connection = connection_lock.lock().unwrap();
-        connection.execute("BEGIN;", []).unwrap();
-        for (chunk_pos, mut chunk_data) in chunks.iter_mut().filter(|(_pos, data)| data.is_dirty())
-        {
-            chunk_data.set_dirty(false);
-            save_chunk(&connection, chunk_pos, &chunk_data.to_raw());
-        }
-        connection.execute("COMMIT;", []).unwrap();
-    }
-}
-
-fn save_chunk(connection: &Connection, chunk_pos: &ChunkPos, chunk_data: &RawChunk) {
-    if let Ok(raw_chunk_bin) = bincode::serialize(chunk_data) {
-        let mut final_chunk = Cursor::new(raw_chunk_bin);
-        let mut output = Cursor::new(Vec::new());
-        copy_encode(&mut final_chunk, &mut output, 0).unwrap();
-        connection
-            .execute(
-                "REPLACE INTO blocks (posx, posy, posz, data) values (?1, ?2, ?3, ?4)",
-                params![
-                    chunk_pos.x,
-                    chunk_pos.y,
-                    chunk_pos.z,
-                    &output.get_ref().clone(),
-                ],
-            )
-            .unwrap();
+        database::save_raw_chunks(
+            &connection_lock,
+            chunks
+                .iter()
+                .filter_map(|(pos, data)| {
+                    if data.is_dirty() {
+                        Some((*pos, data.to_raw()))
+                    } else {
+                        None
+                    }
+                })
+                .collect(),
+        );
     }
 }

@@ -158,7 +158,8 @@ pub(super) fn interact(
         for i in 1..5 {
             let ray_pos = ray.get_point(i as f32 * VOXEL_SIZE);
             let voxel_pos = VoxelPos::from_global_coords(ray_pos.x, ray_pos.y, ray_pos.z);
-            let (chunk_pos, local_x, local_y, local_z) = voxel_pos.to_chunk_coords();
+            let (mut chunk_pos, mut local_x, mut local_y, mut local_z) =
+                voxel_pos.to_chunk_coords();
 
             let Some(chunk_entity) = loaded_chunks.get_chunk(chunk_pos) else { continue; };
             let Ok(mut chunk_data) = chunks.get_mut(*chunk_entity) else { continue; };
@@ -191,6 +192,12 @@ pub(super) fn interact(
                     };
                     prev_chunk_data.set(prev_local_x, prev_local_y, prev_local_z, VOXEL_STONE);
 
+                    // Propagate change of voxel position
+                    chunk_pos = prev_chunk_pos;
+                    local_x = prev_local_x;
+                    local_y = prev_local_y;
+                    local_z = prev_local_z;
+
                     true
                 } else {
                     false
@@ -201,8 +208,18 @@ pub(super) fn interact(
 
             if changed {
                 commands.entity(*chunk_entity).insert(NeedsMesh);
-                for neighbor in loaded_chunks.get_loaded_chunk_neighbors(chunk_pos) {
-                    commands.entity(neighbor).insert(NeedsMesh);
+
+                // If change is on a border, update neighbors
+                if local_x == 0
+                    || local_x == ChunkData::edge() - 1
+                    || local_y == 0
+                    || local_y == ChunkData::edge() - 1
+                    || local_z == 0
+                    || local_z == ChunkData::edge() - 1
+                {
+                    for neighbor in loaded_chunks.get_loaded_chunk_neighbors(chunk_pos) {
+                        commands.entity(neighbor).insert(NeedsMesh);
+                    }
                 }
 
                 // Stop ray casting

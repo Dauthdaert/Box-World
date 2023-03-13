@@ -1,5 +1,5 @@
 use crate::{
-    chunk::{LoadPoint, CHUNK_EDGE},
+    chunk::{ChunkData, LoadPoint},
     states::GameStates,
     voxel::VOXEL_SIZE,
     HORIZONTAL_VIEW_DISTANCE, VERTICAL_VIEW_DISTANCE,
@@ -121,8 +121,10 @@ pub fn spawn_player_cam_and_collider(
                 FogSettings {
                     color: Color::rgba(0.5, 0.5, 0.5, 1.0),
                     falloff: FogFalloff::Linear {
-                        start: ((HORIZONTAL_VIEW_DISTANCE - 4) * CHUNK_EDGE) as f32 * VOXEL_SIZE,
-                        end: ((HORIZONTAL_VIEW_DISTANCE - 2) * CHUNK_EDGE) as f32 * VOXEL_SIZE,
+                        start: ((HORIZONTAL_VIEW_DISTANCE - 4) * ChunkData::edge()) as f32
+                            * VOXEL_SIZE,
+                        end: ((HORIZONTAL_VIEW_DISTANCE - 2) * ChunkData::edge()) as f32
+                            * VOXEL_SIZE,
                     },
                     ..default()
                 },

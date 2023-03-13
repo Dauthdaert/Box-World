@@ -28,7 +28,8 @@ impl Plugin for GeneratorPlugin {
 pub struct NeedsChunkData;
 
 #[derive(Component)]
-struct ComputeChunkData(Task<(Entity, ChunkPos, ChunkData)>);
+#[component(storage = "SparseSet")]
+struct ComputeChunkData(Task<ChunkData>);
 
 fn enqueue_chunk_generation_tasks(
     mut commands: Commands,
@@ -54,6 +55,8 @@ fn enqueue_chunk_generation_tasks(
             let connection_lock = database.get_connection();
 
             let task = thread_pool.spawn(async move {
+                let _span = info_span!("Generate a chunk").entered();
+
                 let connection = connection_lock.lock().unwrap();
                 let stmt = connection.prepare(
                     "SELECT posx, posy, posz, data FROM blocks WHERE posx=:posx AND posy=:posy AND posz=:posz;",
@@ -68,7 +71,7 @@ fn enqueue_chunk_generation_tasks(
                         copy_decode(&chunk_row[..], &mut temp_output).unwrap();
                         let final_chunk = bincode::deserialize(temp_output.get_ref()).unwrap();
 
-                        return (entity, pos, ChunkData::from_raw(final_chunk));
+                        return ChunkData::from_raw(final_chunk);
                     }
                 }
 
@@ -111,36 +114,34 @@ fn enqueue_chunk_generation_tasks(
                         }
                     }
                 }
-                (entity, pos, chunk)
+                chunk
             });
-            commands.spawn(ComputeChunkData(task));
 
-            commands.entity(entity).remove::<NeedsChunkData>();
+            commands.entity(entity).remove::<NeedsChunkData>().insert(ComputeChunkData(task));
         });
 }
 
 fn handle_done_generation_tasks(
     mut commands: Commands,
     world: Res<LoadedChunks>,
-    mut generation_tasks: Query<(Entity, &mut ComputeChunkData)>,
+    mut generation_tasks: Query<(Entity, &ChunkPos, &mut ComputeChunkData)>,
 ) {
     let mut loaded = Vec::new();
     generation_tasks
         .iter_mut()
         .take(4096)
-        .for_each(|(task_entity, mut task)| {
-            if let Some((entity, pos, data)) = future::block_on(future::poll_once(&mut task.0)) {
-                if let Some(mut commands) = commands.get_entity(entity) {
-                    commands.insert((data, NeedsMesh));
-                    loaded.push(pos);
-                }
-
-                commands.entity(task_entity).despawn();
+        .for_each(|(task_entity, pos, mut task)| {
+            if let Some(data) = future::block_on(future::poll_once(&mut task.0)) {
+                commands
+                    .entity(task_entity)
+                    .remove::<ComputeChunkData>()
+                    .insert(data);
+                loaded.push(*pos);
             }
         });
 
     // Re-mesh all neighbors after loading new chunks to simplify geometry
-    for neighbor in world.get_unique_loaded_chunk_neighbors(&loaded) {
+    for neighbor in world.get_unique_loaded_chunks_and_neighbors(&loaded) {
         commands.entity(neighbor).insert(NeedsMesh);
     }
 }
