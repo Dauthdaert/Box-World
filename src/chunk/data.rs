@@ -26,7 +26,7 @@ impl Default for ChunkData {
         Self {
             voxels: Storage::new(ChunkShape::USIZE),
             change_count: 0,
-            dirty: false,
+            dirty: true,
         }
     }
 }

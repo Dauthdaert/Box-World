@@ -51,11 +51,11 @@ fn enqueue_chunk_generation_tasks(
         .for_each(|(entity, pos)| {
             let pos = *pos;
             let noise = noise.clone();
-            let database = database.get_connection();
+            let connection_lock = database.get_connection();
 
             let task = thread_pool.spawn(async move {
-                let database = database.lock().unwrap();
-                let stmt = database.prepare(
+                let connection = connection_lock.lock().unwrap();
+                let stmt = connection.prepare(
                     "SELECT posx, posy, posz, data FROM blocks WHERE posx=:posx AND posy=:posy AND posz=:posz;",
                 );
                 if let Ok(mut stmt) = stmt {

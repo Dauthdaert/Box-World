@@ -1,8 +1,6 @@
 use rusqlite::params;
 use rusqlite::Connection;
 use std::io::Cursor;
-use std::sync::Arc;
-use std::sync::Mutex;
 use zstd::stream::copy_encode;
 
 use crate::world_generator::NeedsChunkData;
@@ -83,12 +81,12 @@ fn load_around_load_points(
         let unloaded_chunks = world.unload_outside_range(&load_pos);
         for entity in unloaded_chunks.iter() {
             if let Ok((chunk_pos, chunk_data)) = chunks.get(*entity) {
-                let database = database.get_connection();
+                let connection_lock = database.get_connection();
                 let chunk_pos = *chunk_pos;
                 let chunk_data = chunk_data.to_raw();
                 thread_pool
                     .spawn(async move {
-                        save_chunk(&database, &chunk_pos, &chunk_data);
+                        save_chunk(&connection_lock.lock().unwrap(), &chunk_pos, &chunk_data);
                     })
                     .detach();
             }
@@ -108,7 +106,7 @@ struct AutosaveTimer(pub Timer);
 
 impl AutosaveTimer {
     fn new() -> Self {
-        Self(Timer::from_seconds(60. * 5., TimerMode::Repeating))
+        Self(Timer::from_seconds(60.0, TimerMode::Repeating))
     }
 }
 
@@ -121,20 +119,30 @@ fn autosave_chunks(
     if autosave_timer.0.tick(time.delta()).just_finished() {
         info!("Starting autosave");
 
+        // Autosave needs to be fast, so we only save a small batch of chunks at a time
         let mut chunks_cloned = Vec::new();
-        for (chunk_pos, mut chunk_data) in chunks.iter_mut().filter(|(_pos, data)| data.is_dirty())
+        for (chunk_pos, mut chunk_data) in chunks
+            .iter_mut()
+            .filter(|(_pos, data)| data.is_dirty())
+            .take(20000)
         {
             chunk_data.set_dirty(false);
             chunks_cloned.push((*chunk_pos, chunk_data.to_raw()));
         }
 
         let thread_pool = AsyncComputeTaskPool::get();
-        let database = database.get_connection();
+        let connection_lock = database.get_connection();
         thread_pool
             .spawn(async move {
+                // Save all chunks in a single transaction
+                let connection = connection_lock.lock().unwrap();
+                connection.execute("BEGIN;", []).unwrap();
                 for (chunk_pos, chunk_data) in chunks_cloned.iter() {
-                    save_chunk(&database, chunk_pos, chunk_data);
+                    save_chunk(&connection, chunk_pos, chunk_data);
                 }
+                connection.execute("COMMIT;", []).unwrap();
+
+                info!("Done autosaving");
             })
             .detach();
     }
@@ -147,22 +155,26 @@ fn save_chunks_on_close(
 ) {
     if !exit.is_empty() {
         info!("Save on close");
+
+        // Save all chunks in a single transaction
+        let connection_lock = database.get_connection();
+        let connection = connection_lock.lock().unwrap();
+        connection.execute("BEGIN;", []).unwrap();
         for (chunk_pos, mut chunk_data) in chunks.iter_mut().filter(|(_pos, data)| data.is_dirty())
         {
             chunk_data.set_dirty(false);
-            save_chunk(&database.get_connection(), chunk_pos, &chunk_data.to_raw());
+            save_chunk(&connection, chunk_pos, &chunk_data.to_raw());
         }
+        connection.execute("COMMIT;", []).unwrap();
     }
 }
 
-fn save_chunk(database: &Arc<Mutex<Connection>>, chunk_pos: &ChunkPos, chunk_data: &RawChunk) {
+fn save_chunk(connection: &Connection, chunk_pos: &ChunkPos, chunk_data: &RawChunk) {
     if let Ok(raw_chunk_bin) = bincode::serialize(chunk_data) {
         let mut final_chunk = Cursor::new(raw_chunk_bin);
         let mut output = Cursor::new(Vec::new());
         copy_encode(&mut final_chunk, &mut output, 0).unwrap();
-        database
-            .lock()
-            .unwrap()
+        connection
             .execute(
                 "REPLACE INTO blocks (posx, posy, posz, data) values (?1, ?2, ?3, ?4)",
                 params![
