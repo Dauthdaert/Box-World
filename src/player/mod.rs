@@ -81,7 +81,7 @@ pub fn spawn_player_cam_and_collider(
         let perspective_projection = PerspectiveProjection {
             fov: std::f32::consts::PI / 1.8,
             near: 0.001,
-            far: 1000.0,
+            far: 1050.0,
             aspect_ratio: 1.0,
         };
         let view_projection = perspective_projection.get_projection_matrix();
