@@ -50,7 +50,17 @@ pub fn setup_daylight_cycle(mut commands: Commands) {
     commands.insert_resource(AtmosphereModel::new(atmosphere_model));
     commands.insert_resource(CycleTimer::new(t));
 
-    commands.spawn((DirectionalLightBundle::default(), Sun));
+    commands.spawn((
+        DirectionalLightBundle {
+            directional_light: DirectionalLight {
+                // TODO: Enable this when we have more frame budget
+                //shadows_enabled: true,
+                ..default()
+            },
+            ..default()
+        },
+        Sun,
+    ));
 
     commands.insert_resource(AmbientLight {
         color: Color::WHITE,
