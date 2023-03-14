@@ -39,7 +39,7 @@ fn periodic_chunk_trim(mut chunks: Query<&mut ChunkData>) {
     for mut data in chunks
         .iter_mut()
         .filter(|data| !data.is_uniform())
-        .choose_multiple(&mut rng, 2)
+        .choose_multiple(&mut rng, 256)
     {
         data.trim();
     }
