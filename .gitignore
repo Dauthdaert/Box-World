@@ -1,3 +1,4 @@
 /target
 trace-*.json
+*.tracy
 /worlds
