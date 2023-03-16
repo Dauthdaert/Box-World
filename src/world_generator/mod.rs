@@ -52,12 +52,12 @@ fn enqueue_chunk_generation_tasks(
         .for_each(|(entity, pos)| {
             let pos = *pos;
             let noise = noise.clone();
-            let connection_lock = database.get_connection();
+            let connection_pool = database.get_connection_pool();
 
             let task = thread_pool.spawn(async move {
                 let _span = info_span!("Generate a chunk").entered();
 
-                let connection = connection_lock.lock().unwrap();
+                let connection = connection_pool.get().unwrap();
                 let stmt = connection.prepare(
                     "SELECT posx, posy, posz, data FROM blocks WHERE posx=:posx AND posy=:posy AND posz=:posz;",
                 );

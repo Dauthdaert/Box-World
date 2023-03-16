@@ -86,7 +86,7 @@ fn load_around_load_points(
 
             if !to_save.is_empty() {
                 let thread_pool = AsyncComputeTaskPool::get();
-                let connection_lock = database.get_connection();
+                let connection_lock = database.get_connection_pool();
                 thread_pool
                     .spawn(async move {
                         info!("Saving {} unloaded chunks", to_save.len());
@@ -137,7 +137,7 @@ fn autosave_chunks(
         }
 
         let thread_pool = AsyncComputeTaskPool::get();
-        let connection_lock = database.get_connection();
+        let connection_lock = database.get_connection_pool();
         thread_pool
             .spawn(async move {
                 database::save_raw_chunks(&connection_lock, chunks_cloned);
@@ -155,7 +155,7 @@ fn save_chunks_on_close(
     if !exit.is_empty() {
         info!("Save on close");
 
-        let connection_lock = database.get_connection();
+        let connection_lock = database.get_connection_pool();
         database::save_raw_chunks(
             &connection_lock,
             chunks

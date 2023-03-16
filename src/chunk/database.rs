@@ -1,21 +1,20 @@
-use std::{
-    io::Cursor,
-    sync::{Arc, Mutex},
-};
+use std::io::Cursor;
 
 use bevy::prelude::info_span;
+use r2d2::Pool;
+use r2d2_sqlite::SqliteConnectionManager;
 use rusqlite::{params, Connection};
 use zstd::stream::copy_encode;
 
 use super::{data::RawChunk, ChunkPos};
 
 pub fn save_raw_chunks(
-    connection_lock: &Arc<Mutex<Connection>>,
+    connection_pool: &Pool<SqliteConnectionManager>,
     chunks: Vec<(ChunkPos, RawChunk)>,
 ) {
     let _span = info_span!("Saving chunks to disk").entered();
 
-    let connection = connection_lock.lock().unwrap();
+    let connection = connection_pool.get().unwrap();
     connection.execute("BEGIN;", []).unwrap();
     for (chunk_pos, chunk_data) in chunks.iter() {
         save_raw_chunk(&connection, chunk_pos, chunk_data);

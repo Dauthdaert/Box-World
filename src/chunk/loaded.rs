@@ -2,20 +2,26 @@ use bevy::{
     prelude::{Component, Entity, Resource},
     utils::{HashMap, HashSet},
 };
-use rusqlite::Connection;
-use std::sync::{Arc, Mutex};
+use r2d2::Pool;
+use r2d2_sqlite::SqliteConnectionManager;
 
 use crate::chunk::ChunkPos;
 
 #[derive(Resource)]
 pub struct Database {
-    connection: Arc<Mutex<Connection>>,
+    pool: Pool<SqliteConnectionManager>,
 }
 
 impl Database {
     pub fn new() -> Self {
-        let connection = Connection::open("worlds/world.db3").unwrap();
-        connection
+        let manager = SqliteConnectionManager::file("worlds/world.db3");
+        let pool = Pool::builder()
+            .max_size(30)
+            .test_on_check_out(false)
+            .build(manager)
+            .unwrap();
+        pool.get()
+            .unwrap()
             .execute(
                 "create table if not exists blocks (
                     posx integer not null,
@@ -28,13 +34,11 @@ impl Database {
             )
             .unwrap();
 
-        Self {
-            connection: Arc::new(Mutex::new(connection)),
-        }
+        Self { pool }
     }
 
-    pub fn get_connection(&self) -> Arc<Mutex<Connection>> {
-        self.connection.clone()
+    pub fn get_connection_pool(&self) -> Pool<SqliteConnectionManager> {
+        self.pool.clone()
     }
 }
 
