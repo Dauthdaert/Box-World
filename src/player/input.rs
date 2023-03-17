@@ -140,6 +140,7 @@ pub(super) fn interact(
     loaded_chunks: Res<LoadedChunks>,
     mouse_input: Res<Input<MouseButton>>,
     window: Query<&Window, With<PrimaryWindow>>,
+    player_position: Query<&Transform, With<Player>>,
     camera: Query<(&Camera, &GlobalTransform)>,
     mut chunks: Query<&mut ChunkData>,
 ) {
@@ -150,13 +151,23 @@ pub(super) fn interact(
         return;
     }
 
+    let player_translation = player_position.single().translation;
+    let player_head_pos = VoxelPos::from_global_coords(
+        player_translation.x,
+        player_translation.y,
+        player_translation.z,
+    );
+    let player_feet_pos =
+        VoxelPos::new(player_head_pos.x, player_head_pos.y - 1, player_head_pos.z);
+
     let cursor_position = Vec2::new(window.width() / 2., window.height() / 2.);
 
+    const RAY_STEP: f32 = VOXEL_SIZE / 2.0;
     for (camera, camera_transform) in camera.iter() {
         let Some(ray) = camera.viewport_to_world(camera_transform, cursor_position) else { return; };
 
-        for i in 1..5 {
-            let ray_pos = ray.get_point(i as f32 * VOXEL_SIZE);
+        for i in 1..10 {
+            let ray_pos = ray.get_point(i as f32 * RAY_STEP);
             let voxel_pos = VoxelPos::from_global_coords(ray_pos.x, ray_pos.y, ray_pos.z);
             let (mut chunk_pos, mut local_x, mut local_y, mut local_z) =
                 voxel_pos.to_chunk_coords();
@@ -174,12 +185,27 @@ pub(super) fn interact(
             } else if mouse_input.just_pressed(MouseButton::Right) {
                 if chunk_data.get(local_x, local_y, local_z) != Voxel::Empty {
                     // Place in previous spot
-                    let prev_ray_pos = ray.get_point((i - 1) as f32 * VOXEL_SIZE);
-                    let prev_voxel_pos = VoxelPos::from_global_coords(
-                        prev_ray_pos.x,
-                        prev_ray_pos.y,
-                        prev_ray_pos.z,
-                    );
+                    let mut prev_voxel_pos = voxel_pos;
+
+                    // Rewind ray backwards by one voxel
+                    for j in 1..i {
+                        let prev_ray_pos = ray.get_point((i - j) as f32 * RAY_STEP);
+                        prev_voxel_pos = VoxelPos::from_global_coords(
+                            prev_ray_pos.x,
+                            prev_ray_pos.y,
+                            prev_ray_pos.z,
+                        );
+
+                        if prev_voxel_pos != voxel_pos {
+                            break;
+                        }
+                    }
+
+                    // Can't place on top of the player
+                    if prev_voxel_pos == player_head_pos || prev_voxel_pos == player_feet_pos {
+                        return;
+                    }
+
                     let (prev_chunk_pos, prev_local_x, prev_local_y, prev_local_z) =
                         prev_voxel_pos.to_chunk_coords();
 
