@@ -14,8 +14,8 @@ pub struct CycleTimer {
 
 impl CycleTimer {
     pub fn new(current_time: f32) -> Self {
-        let mut timer = Timer::from_seconds(0.5, TimerMode::Repeating);
-        timer.set_elapsed(Duration::from_secs_f32(0.5));
+        let mut timer = Timer::from_seconds(0.1, TimerMode::Repeating);
+        timer.set_elapsed(Duration::from_secs_f32(0.1));
         timer.pause();
 
         Self {
