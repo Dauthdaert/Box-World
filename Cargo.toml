@@ -41,7 +41,7 @@ default = [
 ]
 
 [dependencies]
-winit = "0.28.2"
+winit = "0.28.3"
 image = "0.24.5"
 bevy = { version = "0.10", default-features = false }
 bevy_kira_audio = { version = "0.15", default-features = false }
