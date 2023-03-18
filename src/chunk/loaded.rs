@@ -15,6 +15,7 @@ pub struct Database {
 impl Database {
     pub fn new() -> Self {
         let manager = SqliteConnectionManager::file("worlds/world.db3");
+
         let pool = Pool::builder()
             .max_size(30)
             .test_on_check_out(false)
@@ -22,15 +23,17 @@ impl Database {
             .unwrap();
         pool.get()
             .unwrap()
-            .execute(
+            .execute_batch(
                 "create table if not exists blocks (
                     posx integer not null,
                     posy integer not null,
                     posz integer not null,
                     data blob,
                  PRIMARY KEY (posx, posy, posz)
-                )",
-                [],
+                );
+                PRAGMA journal_mode=WAL;
+                PRAGMA synchronous=NORMAL;
+            ",
             )
             .unwrap();
 
