@@ -1,5 +1,4 @@
 use bevy::{
-    asset::LoadState,
     prelude::*,
     reflect::TypeUuid,
     render::{
@@ -7,20 +6,41 @@ use bevy::{
         render_resource::{AsBindGroup, VertexFormat},
     },
 };
+use bevy_asset_loader::prelude::*;
 
-#[derive(Resource, Default)]
+#[derive(AssetCollection, Resource)]
 pub struct TerrainTexture {
-    is_loaded: bool,
-    texture_handle: Handle<Image>,
+    #[asset(path = "textures/terrain_texture.ktx2")]
+    terrain_handle: Handle<Image>,
+}
+
+#[derive(Resource)]
+pub struct TerrainMaterial {
     material_handle: Handle<TerrainTextureMaterial>,
 }
 
-impl TerrainTexture {
-    pub fn is_loaded(&self) -> bool {
-        self.is_loaded
-    }
+impl FromWorld for TerrainMaterial {
+    fn from_world(world: &mut World) -> Self {
+        let cell = world.cell();
+        let terrain_texture = cell
+            .get_resource::<TerrainTexture>()
+            .expect("Unable to get AssetServer");
+        let mut materials = cell
+            .get_resource_mut::<Assets<TerrainTextureMaterial>>()
+            .expect("Unable to get Assets<TerrainTextureMaterial>");
 
-    pub fn material_handle(&self) -> &Handle<TerrainTextureMaterial> {
+        info!("Loading TerrainTextureMaterial");
+
+        Self {
+            material_handle: materials.add(TerrainTextureMaterial {
+                terrain_texture: terrain_texture.terrain_handle.clone_weak(),
+            }),
+        }
+    }
+}
+
+impl TerrainMaterial {
+    pub fn handle(&self) -> &Handle<TerrainTextureMaterial> {
         &self.material_handle
     }
 }
@@ -68,29 +88,4 @@ impl Material for TerrainTextureMaterial {
         descriptor.vertex.buffers = vec![vertex_layout];
         Ok(())
     }
-}
-
-pub fn load_terrain_texture(mut commands: Commands, asset_server: Res<AssetServer>) {
-    commands.insert_resource(TerrainTexture {
-        is_loaded: false,
-        texture_handle: asset_server.load("textures/terrain_texture.ktx2"),
-        ..default()
-    });
-}
-
-pub fn create_terrain_texture_material(
-    asset_server: Res<AssetServer>,
-    mut terrain_texture: ResMut<TerrainTexture>,
-    mut materials: ResMut<Assets<TerrainTextureMaterial>>,
-) {
-    if asset_server.get_load_state(terrain_texture.texture_handle.clone()) != LoadState::Loaded {
-        return;
-    }
-
-    terrain_texture.is_loaded = true;
-
-    // Create material
-    terrain_texture.material_handle = materials.add(TerrainTextureMaterial {
-        terrain_texture: terrain_texture.texture_handle.clone(),
-    });
 }

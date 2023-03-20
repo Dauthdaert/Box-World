@@ -10,7 +10,7 @@ use bevy_rapier3d::prelude::Vect;
 use crate::{
     chunk::{ChunkData, ChunkPos, LoadedChunks},
     mesher::NeedsMesh,
-    voxel::{Voxel, VoxelPos, VOXEL_SIZE, VOXEL_STONE},
+    voxel::{Voxel, VoxelPos, VoxelRegistry, VOXEL_SIZE},
 };
 
 use super::Player;
@@ -135,8 +135,10 @@ pub(super) fn movement_input(
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub(super) fn interact(
     mut commands: Commands,
+    voxel_registry: Res<VoxelRegistry>,
     loaded_chunks: Res<LoadedChunks>,
     mouse_input: Res<Input<MouseButton>>,
     window: Query<&Window, With<PrimaryWindow>>,
@@ -150,6 +152,8 @@ pub(super) fn interact(
     if window.cursor.grab_mode != CursorGrabMode::Locked {
         return;
     }
+
+    let player_equipped_block = voxel_registry.get_voxel("stone");
 
     let player_translation = player_position.single().translation;
     let player_head_pos = VoxelPos::from_global_coords(
@@ -216,7 +220,12 @@ pub(super) fn interact(
                         let Ok(chunk_data) = chunks.get_mut(*chunk_entity) else { continue; };
                         chunk_data
                     };
-                    prev_chunk_data.set(prev_local_x, prev_local_y, prev_local_z, VOXEL_STONE);
+                    prev_chunk_data.set(
+                        prev_local_x,
+                        prev_local_y,
+                        prev_local_z,
+                        player_equipped_block,
+                    );
 
                     // Propagate change of voxel position
                     chunk_pos = prev_chunk_pos;

@@ -10,14 +10,14 @@ use zstd::stream::copy_decode;
 use crate::{
     chunk::{ChunkData, ChunkPos, Database, LoadedChunks},
     mesher::NeedsMesh,
-    voxel::{VoxelPos, VOXEL_AIR, VOXEL_BEDROCK, VOXEL_GRASS, VOXEL_STONE},
+    voxel::{VoxelPos, VoxelRegistry},
 };
 
 pub struct GeneratorPlugin;
 
 impl Plugin for GeneratorPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_system(enqueue_chunk_generation_tasks);
+        app.add_system(enqueue_chunk_generation_tasks.run_if(resource_exists::<VoxelRegistry>()));
 
         app.add_system(handle_done_generation_tasks.in_base_set(CoreSet::PostUpdate));
     }
@@ -34,6 +34,7 @@ struct ComputeChunkData(Task<ChunkData>);
 fn enqueue_chunk_generation_tasks(
     mut commands: Commands,
     database: Res<Database>,
+    voxel_registry: Res<VoxelRegistry>,
     needs_generation: Query<(Entity, &ChunkPos), With<NeedsChunkData>>,
 ) {
     if needs_generation.is_empty() {
@@ -53,6 +54,7 @@ fn enqueue_chunk_generation_tasks(
             let pos = *pos;
             let noise = noise.clone();
             let connection_pool = database.get_connection_pool();
+            let voxel_registry = voxel_registry.clone();
 
             let task = thread_pool.spawn(async move {
                 let _span = info_span!("Generate a chunk").entered();
@@ -84,10 +86,10 @@ fn enqueue_chunk_generation_tasks(
                             let voxel = if voxel_pos.y <= 20 {
                                 if voxel_pos.y < 17 {
                                     // Empty bottom chunk
-                                    VOXEL_AIR
+                                    voxel_registry.get_voxel("air")
                                 } else {
                                     // Bedrock
-                                    VOXEL_BEDROCK
+                                    voxel_registry.get_voxel("bedrock")
                                 }
                             } else {
                                 let noise_val = noise
@@ -96,17 +98,17 @@ fn enqueue_chunk_generation_tasks(
                                 if (voxel_pos.y as f64) < 102. + noise_val {
                                     // Stoney peaks
                                     if voxel_pos.y > 150 {
-                                        VOXEL_STONE
+                                        voxel_registry.get_voxel("stone")
                                     } else {
                                         // Grass
-                                        VOXEL_GRASS
+                                        voxel_registry.get_voxel("grass")
                                     }
                                 } else if (voxel_pos.y as f64) < 100. + noise_val {
                                     // Stone
-                                    VOXEL_STONE
+                                    voxel_registry.get_voxel("stone")
                                 } else {
                                     // Air
-                                    VOXEL_AIR
+                                    voxel_registry.get_voxel("air")
                                 }
                             };
 

@@ -1,42 +1,28 @@
-use serde::{Deserialize, Serialize};
+use bevy::prelude::{App, Plugin};
 
 pub const VOXEL_SIZE: f32 = 2.0;
 
-pub const VOXEL_AIR: Voxel = Voxel::Empty;
-pub const VOXEL_BEDROCK: Voxel = Voxel::Opaque(1);
-pub const VOXEL_GRASS: Voxel = Voxel::Opaque(2);
-pub const VOXEL_STONE: Voxel = Voxel::Opaque(6);
-
+mod data;
 mod position;
+mod registry;
+
+use bevy_asset_loader::prelude::*;
+use bevy_common_assets::ron::RonAssetPlugin;
+pub use data::Voxel;
 pub use position::VoxelPos;
+pub use registry::VoxelRegistry;
 
-#[allow(dead_code)]
-#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
-pub enum Voxel {
-    #[default]
-    Empty,
-    Transparent(u16),
-    Opaque(u16),
-}
+use crate::states::GameStates;
 
-impl Voxel {
-    pub const fn size() -> f32 {
-        VOXEL_SIZE
-    }
+pub struct VoxelPlugin;
 
-    pub fn indice(&self) -> u32 {
-        match self {
-            Voxel::Empty => u32::MAX,
-            Voxel::Transparent(val) | Voxel::Opaque(val) => *val as u32,
-        }
-    }
+impl Plugin for VoxelPlugin {
+    fn build(&self, app: &mut App) {
+        app.add_plugin(RonAssetPlugin::<Voxel>::new(&["voxel.ron"]));
 
-    pub fn visibility(&self) -> crate::mesher::VoxelVisibility {
-        use crate::mesher::VoxelVisibility;
-        match self {
-            Voxel::Empty => VoxelVisibility::Empty,
-            Voxel::Transparent(_) => VoxelVisibility::Transparent,
-            Voxel::Opaque(_) => VoxelVisibility::Opaque,
-        }
+        app.add_collection_to_loading_state::<_, registry::VoxelDataAssets>(
+            GameStates::AssetLoading,
+        )
+        .init_resource_after_loading_state::<_, registry::VoxelRegistry>(GameStates::AssetLoading);
     }
 }

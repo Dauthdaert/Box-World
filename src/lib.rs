@@ -9,6 +9,7 @@ use bevy::{
     },
     window::PresentMode,
 };
+use bevy_asset_loader::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use chunk::{ChunkData, ChunkPos, LoadPoint, LoadedChunks};
 use mesher::NeedsMesh;
@@ -68,14 +69,18 @@ pub fn app() -> App {
         app.add_system(toggle_wireframe);
     }
 
-    app.add_state::<GameStates>();
+    app.add_state::<GameStates>().add_loading_state(
+        LoadingState::new(GameStates::AssetLoading).continue_to_state(GameStates::WorldLoading),
+    );
 
     app.add_startup_system(setup)
         .insert_resource(LoadingTimer::new())
-        .add_system(transition_after_load.in_set(OnUpdate(GameStates::Loading)));
+        .add_system(setup.in_schedule(OnEnter(GameStates::WorldLoading)))
+        .add_system(transition_after_load.run_if(in_state::<GameStates>(GameStates::WorldLoading)));
 
-    app.add_plugin(world_generator::GeneratorPlugin);
+    app.add_plugin(voxel::VoxelPlugin);
     app.add_plugin(chunk::ChunkPlugin);
+    app.add_plugin(world_generator::GeneratorPlugin);
     app.add_plugin(mesher::MesherPlugin);
     app.add_plugin(player::PlayerPlugin);
     app.add_plugin(environment::EnvironmentPlugin);

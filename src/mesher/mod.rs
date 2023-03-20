@@ -2,11 +2,14 @@ use bevy::{
     prelude::*,
     tasks::{AsyncComputeTaskPool, Task},
 };
-
+use bevy_asset_loader::prelude::*;
 use bevy_rapier3d::prelude::Collider;
 use futures_lite::future;
 
-use crate::chunk::{ChunkData, ChunkPos, LoadedChunks};
+use crate::{
+    chunk::{ChunkData, ChunkPos, LoadedChunks},
+    states::GameStates,
+};
 
 use self::{chunk_boundary::ChunkBoundary, generate::generate_mesh, render::*};
 
@@ -25,15 +28,16 @@ pub struct MesherPlugin;
 impl Plugin for MesherPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_system(enqueue_meshing_tasks)
-            .add_system(handle_done_meshing_tasks.in_base_set(CoreSet::PostUpdate))
+            .add_system(
+                handle_done_meshing_tasks
+                    .run_if(resource_exists::<TerrainMaterial>())
+                    .in_base_set(CoreSet::PostUpdate),
+            )
             .add_system(rapier_slowdown_workaround);
 
         app.add_plugin(MaterialPlugin::<TerrainTextureMaterial>::default())
-            .add_startup_system(load_terrain_texture)
-            .add_system(
-                create_terrain_texture_material
-                    .run_if(|texture: Res<TerrainTexture>| !texture.is_loaded()),
-            );
+            .add_collection_to_loading_state::<_, render::TerrainTexture>(GameStates::AssetLoading)
+            .init_resource_after_loading_state::<_, TerrainMaterial>(GameStates::AssetLoading);
     }
 }
 
@@ -91,7 +95,7 @@ fn enqueue_meshing_tasks(
 
 fn handle_done_meshing_tasks(
     mut commands: Commands,
-    terrain_texture: Res<TerrainTexture>,
+    terrain_texture: Res<TerrainMaterial>,
     mut mesh_tasks: Query<(Entity, &ChunkPos, Option<&Transform>, &mut ComputeMesh)>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
@@ -109,7 +113,7 @@ fn handle_done_meshing_tasks(
                 } else {
                     commands.insert((
                         MaterialMeshBundle {
-                            material: terrain_texture.material_handle().clone_weak(),
+                            material: terrain_texture.handle().clone_weak(),
                             mesh: meshes.add(mesh),
                             transform: Transform::from_xyz(
                                 chunk_world_x,

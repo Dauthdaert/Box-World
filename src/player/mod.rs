@@ -46,7 +46,7 @@ impl Plugin for PlayerPlugin {
                 .in_set(OnUpdate(GameStates::InGame)),
         );
 
-        app.add_system(collision::movement.in_set(OnUpdate(GameStates::InGame)));
+        app.add_system(collision::movement.run_if(in_state::<GameStates>(GameStates::InGame)));
     }
 }
 
