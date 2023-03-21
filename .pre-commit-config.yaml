@@ -16,3 +16,7 @@ repos:
     args: ['--manifest-path', 'box_world/Cargo.toml', '--verbose', '--']
   - id: clippy
     args: ['--manifest-path', 'box_world/Cargo.toml']
+  - id: fmt
+    args: ['--manifest-path', 'box_world_data/Cargo.toml', '--verbose', '--']
+  - id: clippy
+    args: ['--manifest-path', 'box_world_data/Cargo.toml']
