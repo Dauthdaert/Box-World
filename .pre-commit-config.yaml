@@ -13,6 +13,6 @@ repos:
   rev: v1.0
   hooks:
   - id: fmt
-    args: ['--verbose', '--']
-  - id: cargo-check
+    args: ['--manifest-path', 'box_world/Cargo.toml', '--verbose', '--']
   - id: clippy
+    args: ['--manifest-path', 'box_world/Cargo.toml']
