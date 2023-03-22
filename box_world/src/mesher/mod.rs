@@ -86,7 +86,7 @@ fn enqueue_meshing_tasks(
         let data = data.clone();
 
         let task = thread_pool.spawn(async move {
-            let _span = info_span!("Generate mesh task").entered();
+            let _span = info_span!("Generate mesh and chunk boundary").entered();
             generate_mesh(ChunkBoundary::new(data, neighbors))
         });
         commands.entity(entity).insert(ComputeMesh(task));

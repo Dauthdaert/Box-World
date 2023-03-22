@@ -1,5 +1,5 @@
 use bevy::{
-    prelude::{Mesh, Vec3},
+    prelude::{info_span, Mesh, Vec3},
     render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
 use bevy_rapier3d::prelude::Collider;
@@ -15,6 +15,7 @@ use super::{
 //const UV_SCALE: f32 = 1.0 / 16.0;
 
 pub fn generate_mesh(chunk: ChunkBoundary) -> (Mesh, Option<Collider>) {
+    let _span = info_span!("Generate mesh only").entered();
     let mut buffer = QuadGroups::default();
     generate_mesh_with_buffer(chunk, &mut buffer)
 }
