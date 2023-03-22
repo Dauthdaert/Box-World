@@ -79,10 +79,12 @@ impl ChunkData {
         CHUNK_EDGE
     }
 
+    #[inline]
     pub fn linearize(x: usize, y: usize, z: usize) -> usize {
         ChunkShape::linearize([x, y, z])
     }
 
+    #[inline]
     pub fn delinearize(idx: usize) -> (usize, usize, usize) {
         let res = ChunkShape::delinearize(idx);
         (res[0], res[1], res[2])
