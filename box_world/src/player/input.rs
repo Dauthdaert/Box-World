@@ -180,14 +180,14 @@ pub(super) fn interact(
             let Ok(mut chunk_data) = chunks.get_mut(*chunk_entity) else { continue; };
 
             let changed = if mouse_input.just_pressed(MouseButton::Left) {
-                if chunk_data.get(local_x, local_y, local_z) != Voxel::Empty {
-                    chunk_data.set(local_x, local_y, local_z, Voxel::Empty);
+                if !chunk_data.get(local_x, local_y, local_z).is_empty() {
+                    chunk_data.set(local_x, local_y, local_z, Voxel::default());
                     true
                 } else {
                     false
                 }
             } else if mouse_input.just_pressed(MouseButton::Right) {
-                if chunk_data.get(local_x, local_y, local_z) != Voxel::Empty {
+                if !chunk_data.get(local_x, local_y, local_z).is_empty() {
                     // Place in previous spot
                     let mut prev_voxel_pos = voxel_pos;
 

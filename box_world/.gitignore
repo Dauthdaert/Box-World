@@ -2,3 +2,5 @@
 trace-*.json
 *.tracy
 /worlds
+/assets/data/blocks
+/assets/textures/terrain_texture.ktx2

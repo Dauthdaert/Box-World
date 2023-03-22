@@ -49,7 +49,7 @@ impl ChunkBoundary {
                 (BOUND, BOUND, 1..=MAX) => neighbors[24].get(0, 0, z - 1),
                 (BOUND, BOUND, BOUND) => neighbors[25].get(0, 0, 0),
 
-                (_, _, _) => Voxel::Empty,
+                (_, _, _) => Voxel::default(),
             }
         }));
 

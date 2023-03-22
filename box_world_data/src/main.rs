@@ -2,7 +2,7 @@ use std::{collections::HashMap, fs, process::Command};
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize, Clone, Copy)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy)]
 enum VoxelType {
     Empty,
     Opaque,
@@ -16,10 +16,18 @@ struct VoxelData {
 }
 
 #[derive(Debug, Serialize, Clone, Copy)]
-enum FinalVoxelType {
-    Empty,
-    Opaque(u32),
-    Transparent(u32),
+struct FinalVoxelType {
+    pub visibility: VoxelType,
+    pub texture_id: u16,
+}
+
+impl FinalVoxelType {
+    pub fn from_voxel_data(data: VoxelData) -> Self {
+        Self {
+            visibility: data.voxel_type,
+            texture_id: data.texture_id.try_into().unwrap(),
+        }
+    }
 }
 
 fn main() {
@@ -43,11 +51,7 @@ fn main() {
 
 fn generate_final_voxel_data(blocks: &HashMap<String, VoxelData>) {
     for (voxel_name, voxel_data) in blocks.iter() {
-        let final_data = match voxel_data.voxel_type {
-            VoxelType::Empty => FinalVoxelType::Empty,
-            VoxelType::Opaque => FinalVoxelType::Opaque(voxel_data.texture_id),
-            VoxelType::Transparent => FinalVoxelType::Transparent(voxel_data.texture_id),
-        };
+        let final_data = FinalVoxelType::from_voxel_data(*voxel_data);
         let mut final_string = ron::to_string(&final_data).unwrap();
         if cfg!(windows) {
             final_string.push_str("\r\n");

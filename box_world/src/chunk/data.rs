@@ -56,7 +56,7 @@ impl ChunkData {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.is_uniform() && self.get(0, 0, 0) == Voxel::Empty
+        self.is_uniform() && self.get(0, 0, 0).is_empty()
     }
 
     pub fn is_dirty(&self) -> bool {

@@ -76,7 +76,7 @@ impl Storage {
     pub fn new(size: usize) -> Self {
         Self::Single(SingleStorage {
             size,
-            voxel: Voxel::Empty,
+            voxel: Voxel::default(),
         })
     }
 
