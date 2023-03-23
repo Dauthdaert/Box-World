@@ -47,7 +47,11 @@ impl QuadGroups {
     }
 }
 
-pub fn generate_quads_with_buffer(chunk_boundary: &ChunkBoundary, buffer: &mut QuadGroups) {
+pub fn generate_quads_with_buffer(
+    solid_pass: bool,
+    chunk_boundary: &ChunkBoundary,
+    buffer: &mut QuadGroups,
+) {
     buffer.clear();
 
     let x_offset = ChunkBoundary::x_offset();
@@ -76,14 +80,28 @@ pub fn generate_quads_with_buffer(chunk_boundary: &ChunkBoundary, buffer: &mut Q
                         for (i, neighbor) in neighbors.into_iter().enumerate() {
                             let other = neighbor.visibility();
 
-                            let generate = match (visibility, other) {
-                                (VoxelVisibility::Opaque, VoxelVisibility::Empty)
-                                | (VoxelVisibility::Opaque, VoxelVisibility::Transparent)
-                                | (VoxelVisibility::Transparent, VoxelVisibility::Empty) => true,
-                                (VoxelVisibility::Transparent, VoxelVisibility::Transparent) => {
-                                    voxel != neighbor
+                            let generate = if solid_pass {
+                                match (visibility, other) {
+                                    (VoxelVisibility::Opaque, VoxelVisibility::Empty)
+                                    | (VoxelVisibility::Opaque, VoxelVisibility::Transparent) => {
+                                        true
+                                    }
+
+                                    (
+                                        VoxelVisibility::Transparent,
+                                        VoxelVisibility::Transparent,
+                                    ) => voxel != neighbor,
+                                    (_, _) => false,
                                 }
-                                (_, _) => false,
+                            } else {
+                                match (visibility, other) {
+                                    (VoxelVisibility::Transparent, VoxelVisibility::Empty) => true,
+                                    (
+                                        VoxelVisibility::Transparent,
+                                        VoxelVisibility::Transparent,
+                                    ) => voxel != neighbor,
+                                    (_, _) => false,
+                                }
                             };
 
                             if generate {

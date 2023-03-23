@@ -1,9 +1,7 @@
 use bevy::{
-    prelude::{info_span, Mesh, Vec3},
+    prelude::{info_span, Mesh},
     render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
-use bevy_rapier3d::prelude::Collider;
-use itertools::Itertools;
 
 use crate::voxel::Voxel;
 
@@ -14,21 +12,30 @@ use super::{
 
 //const UV_SCALE: f32 = 1.0 / 16.0;
 
-pub fn generate_mesh(chunk: ChunkBoundary) -> (Mesh, Option<Collider>) {
+pub fn generate_mesh(chunk: ChunkBoundary) -> (Option<Mesh>, Option<Mesh>) {
     let _span = info_span!("Generate mesh only").entered();
     let mut buffer = QuadGroups::default();
-    generate_mesh_with_buffer(chunk, &mut buffer)
+
+    let solid_mesh = generate_mesh_with_buffer(true, &chunk, &mut buffer);
+    let transparent_mesh = generate_mesh_with_buffer(false, &chunk, &mut buffer);
+
+    (solid_mesh, transparent_mesh)
 }
 
 /// Generate a mesh according to the chunk boundary
 /// Uses the algorithm described in this article : https://playspacefarer.com/voxel-meshing/
 pub fn generate_mesh_with_buffer(
-    chunk: ChunkBoundary,
+    solid_pass: bool,
+    chunk: &ChunkBoundary,
     buffer: &mut QuadGroups,
-) -> (Mesh, Option<Collider>) {
-    generate_quads_with_buffer(&chunk, buffer);
+) -> Option<Mesh> {
+    generate_quads_with_buffer(solid_pass, chunk, buffer);
 
     let num_quads = buffer.num_quads();
+    if num_quads == 0 {
+        return None;
+    }
+
     let num_indices = num_quads * 6;
     let num_vertices = num_quads * 4;
 
@@ -39,7 +46,7 @@ pub fn generate_mesh_with_buffer(
     let mut ao = Vec::with_capacity(num_vertices);
     let mut texture_indices = Vec::with_capacity(num_vertices);
 
-    for face in buffer.iter_with_ao(&chunk) {
+    for face in buffer.iter_with_ao(chunk) {
         indices.extend_from_slice(&face.indices(positions.len() as u32));
         positions.extend_from_slice(&face.positions(Voxel::size()));
         normals.extend_from_slice(&face.normals());
@@ -47,20 +54,6 @@ pub fn generate_mesh_with_buffer(
         ao.extend_from_slice(&face.aos());
         texture_indices.extend_from_slice(&[face.texture_indice(); 4]);
     }
-
-    let collider = if !positions.is_empty() {
-        Some(Collider::trimesh(
-            positions.iter().copied().map(Vec3::from_array).collect(),
-            indices
-                .iter()
-                .copied()
-                .tuples()
-                .map(|(x, y, z)| [x, y, z])
-                .collect(),
-        ))
-    } else {
-        None
-    };
 
     let mut mesh = Mesh::new(PrimitiveTopology::TriangleList);
     mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
@@ -70,7 +63,7 @@ pub fn generate_mesh_with_buffer(
     mesh.insert_attribute(super::render::ATTRIBUTE_VOXEL_INDICES, texture_indices);
     mesh.set_indices(Some(Indices::U32(indices)));
 
-    (mesh, collider)
+    Some(mesh)
 }
 
 fn convert_ao(ao: &[u32]) -> Vec<[f32; 4]> {

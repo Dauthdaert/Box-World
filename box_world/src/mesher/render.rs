@@ -1,10 +1,8 @@
 use bevy::{
+    pbr::StandardMaterialFlags,
     prelude::*,
     reflect::TypeUuid,
-    render::{
-        mesh::MeshVertexAttribute,
-        render_resource::{AsBindGroup, VertexFormat},
-    },
+    render::{mesh::MeshVertexAttribute, render_resource::*},
 };
 use bevy_asset_loader::prelude::*;
 
@@ -16,7 +14,8 @@ pub struct TerrainTexture {
 
 #[derive(Resource)]
 pub struct TerrainMaterial {
-    material_handle: Handle<TerrainTextureMaterial>,
+    opaque_material: Handle<TerrainTextureMaterial>,
+    transparent_material: Handle<TerrainTextureMaterial>,
 }
 
 impl FromWorld for TerrainMaterial {
@@ -32,16 +31,54 @@ impl FromWorld for TerrainMaterial {
         info!("Loading TerrainTextureMaterial");
 
         Self {
-            material_handle: materials.add(TerrainTextureMaterial {
+            opaque_material: materials.add(TerrainTextureMaterial {
                 terrain_texture: terrain_texture.terrain_handle.clone_weak(),
+                alpha_mode: AlphaMode::Opaque,
+            }),
+            transparent_material: materials.add(TerrainTextureMaterial {
+                terrain_texture: terrain_texture.terrain_handle.clone_weak(),
+                alpha_mode: AlphaMode::Blend,
             }),
         }
     }
 }
 
 impl TerrainMaterial {
-    pub fn handle(&self) -> &Handle<TerrainTextureMaterial> {
-        &self.material_handle
+    pub fn opaque(&self) -> &Handle<TerrainTextureMaterial> {
+        &self.opaque_material
+    }
+
+    pub fn transparent(&self) -> &Handle<TerrainTextureMaterial> {
+        &self.transparent_material
+    }
+}
+
+#[derive(Clone, Default, ShaderType)]
+pub struct TerrainTextureMaterialUniform {
+    pub flags: u32,
+    pub alpha_cutoff: f32,
+}
+
+impl From<&TerrainTextureMaterial> for TerrainTextureMaterialUniform {
+    fn from(value: &TerrainTextureMaterial) -> Self {
+        let mut flags = StandardMaterialFlags::NONE;
+        let mut alpha_cutoff = 0.5;
+        match value.alpha_mode {
+            AlphaMode::Opaque => flags |= StandardMaterialFlags::ALPHA_MODE_OPAQUE,
+            AlphaMode::Mask(c) => {
+                alpha_cutoff = c;
+                flags |= StandardMaterialFlags::ALPHA_MODE_MASK;
+            }
+            AlphaMode::Blend => flags |= StandardMaterialFlags::ALPHA_MODE_BLEND,
+            AlphaMode::Premultiplied => flags |= StandardMaterialFlags::ALPHA_MODE_PREMULTIPLIED,
+            AlphaMode::Add => flags |= StandardMaterialFlags::ALPHA_MODE_ADD,
+            AlphaMode::Multiply => flags |= StandardMaterialFlags::ALPHA_MODE_MULTIPLY,
+        };
+
+        Self {
+            flags: flags.bits(),
+            alpha_cutoff,
+        }
     }
 }
 
@@ -50,10 +87,12 @@ pub const ATTRIBUTE_VOXEL_INDICES: MeshVertexAttribute =
 
 #[derive(AsBindGroup, Debug, Clone, TypeUuid)]
 #[uuid = "8033ab15-49da-4f1f-b2aa-ecda82927520"]
+#[uniform(0, TerrainTextureMaterialUniform)]
 pub struct TerrainTextureMaterial {
-    #[texture(0, dimension = "2d_array")]
-    #[sampler(1)]
+    #[texture(1, dimension = "2d_array")]
+    #[sampler(2)]
     terrain_texture: Handle<Image>,
+    alpha_mode: AlphaMode,
 }
 
 impl Material for TerrainTextureMaterial {
@@ -66,7 +105,7 @@ impl Material for TerrainTextureMaterial {
     }
 
     fn alpha_mode(&self) -> AlphaMode {
-        AlphaMode::Opaque
+        self.alpha_mode
     }
 
     fn specialize(

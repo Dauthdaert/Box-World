@@ -3,7 +3,7 @@ use bevy::{
     tasks::{AsyncComputeTaskPool, Task},
 };
 use bevy_asset_loader::prelude::*;
-use bevy_rapier3d::prelude::Collider;
+use bevy_rapier3d::prelude::{AsyncCollider, Collider, ComputedColliderShape};
 use futures_lite::future;
 
 use crate::{
@@ -45,8 +45,13 @@ impl Plugin for MesherPlugin {
 #[component(storage = "SparseSet")]
 pub struct NeedsMesh;
 
+struct ComputedMesh {
+    solid_mesh: Option<Mesh>,
+    transparent_mesh: Option<Mesh>,
+}
+
 #[derive(Component)]
-struct ComputeMesh(Task<(Mesh, Option<Collider>)>);
+struct ComputeMesh(Task<ComputedMesh>);
 
 fn enqueue_meshing_tasks(
     mut commands: Commands,
@@ -87,34 +92,49 @@ fn enqueue_meshing_tasks(
 
         let task = thread_pool.spawn(async move {
             let _span = info_span!("Generate mesh and chunk boundary").entered();
-            generate_mesh(ChunkBoundary::new(data, neighbors))
+            let result = generate_mesh(ChunkBoundary::new(data, neighbors));
+            ComputedMesh {
+                solid_mesh: result.0,
+                transparent_mesh: result.1,
+            }
         });
         commands.entity(entity).insert(ComputeMesh(task));
     });
 }
 
+#[allow(clippy::type_complexity)]
 fn handle_done_meshing_tasks(
     mut commands: Commands,
     terrain_texture: Res<TerrainMaterial>,
-    mut mesh_tasks: Query<(Entity, &ChunkPos, Option<&Transform>, &mut ComputeMesh)>,
+    mut mesh_tasks: Query<(
+        Entity,
+        Option<&Children>,
+        &ChunkPos,
+        Option<&Transform>,
+        &mut ComputeMesh,
+    )>,
     mut meshes: ResMut<Assets<Mesh>>,
 ) {
-    mesh_tasks.for_each_mut(|(task_entity, pos, transform, mut task)| {
-        if let Some((mesh, collider)) = future::block_on(future::poll_once(&mut task.0)) {
+    mesh_tasks.for_each_mut(|(chunk_entity, children, pos, transform, mut task)| {
+        if let Some(computed_mesh) = future::block_on(future::poll_once(&mut task.0)) {
             let (chunk_world_x, chunk_world_y, chunk_world_z) = pos.to_global_coords();
-            let mut commands = commands.entity(task_entity);
-            if mesh.indices().map_or(false, |indices| !indices.is_empty()) {
+            let mut solid_commands = commands.entity(chunk_entity);
+
+            let solid_mesh = computed_mesh.solid_mesh;
+            let transparent_mesh = computed_mesh.transparent_mesh;
+
+            if let Some(solid_mesh) = solid_mesh {
                 if transform.is_some() {
-                    commands.insert((
-                        meshes.add(mesh),
+                    solid_commands.insert((
+                        meshes.add(solid_mesh),
                         RapierSlowdownWorkaround,
-                        collider.expect("Collider should exist if mesh exists"),
+                        AsyncCollider(ComputedColliderShape::TriMesh),
                     ));
                 } else {
-                    commands.insert((
+                    solid_commands.insert((
                         MaterialMeshBundle {
-                            material: terrain_texture.handle().clone_weak(),
-                            mesh: meshes.add(mesh),
+                            material: terrain_texture.opaque().clone_weak(),
+                            mesh: meshes.add(solid_mesh),
                             transform: Transform::from_xyz(
                                 chunk_world_x,
                                 chunk_world_y,
@@ -123,14 +143,41 @@ fn handle_done_meshing_tasks(
                             ..default()
                         },
                         RapierSlowdownWorkaround,
-                        collider.expect("Collider should exist if mesh exists"),
+                        AsyncCollider(ComputedColliderShape::TriMesh),
                     ));
                 }
+            } else if transparent_mesh.is_some() {
+                solid_commands.remove::<(Handle<Mesh>, Collider)>();
             } else {
-                commands.remove::<(MaterialMeshBundle<TerrainTextureMaterial>, Collider)>();
+                solid_commands.remove::<(MaterialMeshBundle<TerrainTextureMaterial>, Collider)>();
             }
 
-            commands.remove::<ComputeMesh>();
+            solid_commands.remove::<ComputeMesh>();
+
+            let transparent_chunk_entity = children.and_then(|children| children.get(0));
+            if let Some(transparent_mesh) = transparent_mesh {
+                if let Some(transparent_chunk_entity) = transparent_chunk_entity {
+                    let mut transparent_commands = commands.entity(*transparent_chunk_entity);
+                    transparent_commands.insert((
+                        meshes.add(transparent_mesh),
+                        AsyncCollider(ComputedColliderShape::TriMesh),
+                    ));
+                } else {
+                    let child = commands
+                        .spawn((
+                            MaterialMeshBundle {
+                                material: terrain_texture.transparent().clone_weak(),
+                                mesh: meshes.add(transparent_mesh),
+                                ..default()
+                            },
+                            AsyncCollider(ComputedColliderShape::TriMesh),
+                        ))
+                        .id();
+                    commands.entity(chunk_entity).add_child(child);
+                }
+            } else {
+                commands.entity(chunk_entity).despawn_descendants();
+            }
         }
     });
 }

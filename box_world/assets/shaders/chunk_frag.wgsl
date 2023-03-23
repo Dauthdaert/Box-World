@@ -10,9 +10,16 @@
 #import bevy_pbr::pbr_functions
 #import bevy_pbr::pbr_ambient
 
+struct TerrainTextureMaterial {
+    flags: u32,
+    alpha_cutoff: f32,
+}
+
 @group(1) @binding(0)
-var terrain_texture: texture_2d_array<f32>;
+var<uniform> material: TerrainTextureMaterial;
 @group(1) @binding(1)
+var terrain_texture: texture_2d_array<f32>;
+@group(1) @binding(2)
 var terrain_texture_sampler: sampler;
 
 struct FragmentInput {
@@ -30,6 +37,9 @@ fn fragment(in: FragmentInput) -> @location(0) vec4<f32> {
     pbr_input.material.metallic = 0.0;
     pbr_input.material.reflectance = 0.0;
     pbr_input.material.perceptual_roughness = 0.9;
+
+    pbr_input.material.flags = material.flags;
+    pbr_input.material.alpha_cutoff = material.alpha_cutoff;
 
     // Get color form array texture
     pbr_input.material.base_color = textureSample(terrain_texture, terrain_texture_sampler, in.uv, i32(in.voxel_indice));
