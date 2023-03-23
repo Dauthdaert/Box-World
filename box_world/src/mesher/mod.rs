@@ -1,5 +1,7 @@
 use bevy::{
+    math::Vec3A,
     prelude::*,
+    render::primitives::Aabb,
     tasks::{AsyncComputeTaskPool, Task},
 };
 use bevy_asset_loader::prelude::*;
@@ -9,6 +11,7 @@ use futures_lite::future;
 use crate::{
     chunk::{ChunkData, ChunkPos, LoadedChunks},
     states::GameStates,
+    voxel::VOXEL_SIZE,
 };
 
 use self::{chunk_boundary::ChunkBoundary, generate::generate_mesh, render::*};
@@ -142,6 +145,18 @@ fn handle_done_meshing_tasks(
                             ),
                             ..default()
                         },
+                        Aabb {
+                            center: Vec3A::new(
+                                (ChunkData::edge() / 2) as f32 * VOXEL_SIZE,
+                                (ChunkData::edge() / 2) as f32 * VOXEL_SIZE,
+                                (ChunkData::edge() / 2) as f32 * VOXEL_SIZE,
+                            ),
+                            half_extents: Vec3A::new(
+                                (ChunkData::edge() / 2) as f32 * VOXEL_SIZE,
+                                (ChunkData::edge() / 2) as f32 * VOXEL_SIZE,
+                                (ChunkData::edge() / 2) as f32 * VOXEL_SIZE,
+                            ),
+                        },
                         RapierSlowdownWorkaround,
                         AsyncCollider(ComputedColliderShape::TriMesh),
                     ));
@@ -149,7 +164,8 @@ fn handle_done_meshing_tasks(
             } else if transparent_mesh.is_some() {
                 solid_commands.remove::<(Handle<Mesh>, Collider)>();
             } else {
-                solid_commands.remove::<(MaterialMeshBundle<TerrainTextureMaterial>, Collider)>();
+                solid_commands
+                    .remove::<(MaterialMeshBundle<TerrainTextureMaterial>, Collider, Aabb)>();
             }
 
             solid_commands.remove::<ComputeMesh>();
@@ -171,6 +187,18 @@ fn handle_done_meshing_tasks(
                                 ..default()
                             },
                             AsyncCollider(ComputedColliderShape::TriMesh),
+                            Aabb {
+                                center: Vec3A::new(
+                                    (ChunkData::edge() / 2) as f32 * VOXEL_SIZE,
+                                    (ChunkData::edge() / 2) as f32 * VOXEL_SIZE,
+                                    (ChunkData::edge() / 2) as f32 * VOXEL_SIZE,
+                                ),
+                                half_extents: Vec3A::new(
+                                    (ChunkData::edge() / 2) as f32 * VOXEL_SIZE,
+                                    (ChunkData::edge() / 2) as f32 * VOXEL_SIZE,
+                                    (ChunkData::edge() / 2) as f32 * VOXEL_SIZE,
+                                ),
+                            },
                         ))
                         .id();
                     commands.entity(chunk_entity).add_child(child);

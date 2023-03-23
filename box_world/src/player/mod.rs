@@ -79,18 +79,13 @@ pub fn spawn_player_cam_and_collider(
 
     let camera = {
         let perspective_projection = PerspectiveProjection {
-            fov: std::f32::consts::PI / 1.8,
+            fov: 80.0_f32.to_radians(),
             near: 0.001,
-            far: 1050.0,
+            far: 1250.0,
             aspect_ratio: 1.0,
         };
         let view_projection = perspective_projection.get_projection_matrix();
-        let frustum = Frustum::from_view_projection_custom_far(
-            &view_projection,
-            &Vec3::ZERO,
-            &Vec3::Z,
-            perspective_projection.far(),
-        );
+        let frustum = Frustum::from_view_projection(&view_projection);
         Camera3dBundle {
             projection: Projection::Perspective(perspective_projection),
             frustum,
