@@ -13,7 +13,7 @@ use crate::{
     voxel::{Voxel, VoxelPos, VoxelRegistry, VOXEL_SIZE},
 };
 
-use super::Player;
+use super::{highlight::HighlightCube, Player};
 
 #[derive(Component)]
 pub struct FPSCamera {
@@ -144,6 +144,7 @@ pub(super) fn interact(
     window: Query<&Window, With<PrimaryWindow>>,
     player_position: Query<&Transform, With<Player>>,
     camera: Query<(&Camera, &GlobalTransform)>,
+    mut highlight_cube: Query<&mut Transform, (With<HighlightCube>, Without<Player>)>,
     mut chunks: Query<&mut ChunkData>,
 ) {
     let window = window.single();
@@ -179,15 +180,16 @@ pub(super) fn interact(
             let Some(chunk_entity) = loaded_chunks.get_chunk(chunk_pos) else { continue; };
             let Ok(mut chunk_data) = chunks.get_mut(*chunk_entity) else { continue; };
 
-            let changed = if mouse_input.just_pressed(MouseButton::Left) {
-                if !chunk_data.get(local_x, local_y, local_z).is_empty() {
+            if !chunk_data.get(local_x, local_y, local_z).is_empty() {
+                // Highlight selected block
+                let mut hightlight_cube = highlight_cube.single_mut();
+                hightlight_cube.translation = voxel_pos.to_global_coords();
+
+                // Interact with selected block
+                let changed = if mouse_input.just_pressed(MouseButton::Left) {
                     chunk_data.set(local_x, local_y, local_z, Voxel::default());
                     true
-                } else {
-                    false
-                }
-            } else if mouse_input.just_pressed(MouseButton::Right) {
-                if !chunk_data.get(local_x, local_y, local_z).is_empty() {
+                } else if mouse_input.just_pressed(MouseButton::Right) {
                     // Place in previous spot
                     let mut prev_voxel_pos = voxel_pos;
 
@@ -236,24 +238,22 @@ pub(super) fn interact(
                     true
                 } else {
                     false
-                }
-            } else {
-                false
-            };
+                };
 
-            if changed {
-                commands.entity(*chunk_entity).insert(NeedsMesh);
+                if changed {
+                    commands.entity(*chunk_entity).insert(NeedsMesh);
 
-                // If change is on a border, update neighbors
-                if local_x == 0
-                    || local_x == ChunkData::edge() - 1
-                    || local_y == 0
-                    || local_y == ChunkData::edge() - 1
-                    || local_z == 0
-                    || local_z == ChunkData::edge() - 1
-                {
-                    for neighbor in loaded_chunks.get_loaded_chunk_neighbors(chunk_pos) {
-                        commands.entity(neighbor).insert(NeedsMesh);
+                    // If change is on a border, update neighbors
+                    if local_x == 0
+                        || local_x == ChunkData::edge() - 1
+                        || local_y == 0
+                        || local_y == ChunkData::edge() - 1
+                        || local_z == 0
+                        || local_z == ChunkData::edge() - 1
+                    {
+                        for neighbor in loaded_chunks.get_loaded_chunk_neighbors(chunk_pos) {
+                            commands.entity(neighbor).insert(NeedsMesh);
+                        }
                     }
                 }
 

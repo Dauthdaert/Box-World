@@ -52,6 +52,14 @@ impl VoxelPos {
         }
     }
 
+    pub fn to_global_coords(self) -> Vec3 {
+        Vec3::new(
+            self.x as f32 * Voxel::size(),
+            self.y as f32 * Voxel::size(),
+            self.z as f32 * Voxel::size(),
+        )
+    }
+
     pub fn neighbors(&self) -> [VoxelPos; 6] {
         [
             VoxelPos::new(self.x + 1, self.y, self.z),
