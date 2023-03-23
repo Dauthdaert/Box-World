@@ -33,11 +33,12 @@ impl FromWorld for TerrainMaterial {
         Self {
             opaque_material: materials.add(TerrainTextureMaterial {
                 terrain_texture: terrain_texture.terrain_handle.clone_weak(),
-                alpha_mode: AlphaMode::Opaque,
+                ..default()
             }),
             transparent_material: materials.add(TerrainTextureMaterial {
                 terrain_texture: terrain_texture.terrain_handle.clone_weak(),
                 alpha_mode: AlphaMode::Blend,
+                ..default()
             }),
         }
     }
@@ -62,6 +63,11 @@ pub struct TerrainTextureMaterialUniform {
 impl From<&TerrainTextureMaterial> for TerrainTextureMaterialUniform {
     fn from(value: &TerrainTextureMaterial) -> Self {
         let mut flags = StandardMaterialFlags::NONE;
+
+        if value.double_sided {
+            flags |= StandardMaterialFlags::DOUBLE_SIDED;
+        }
+
         let mut alpha_cutoff = 0.5;
         match value.alpha_mode {
             AlphaMode::Opaque => flags |= StandardMaterialFlags::ALPHA_MODE_OPAQUE,
@@ -82,17 +88,47 @@ impl From<&TerrainTextureMaterial> for TerrainTextureMaterialUniform {
     }
 }
 
+#[derive(Clone, PartialEq, Eq, Hash)]
+pub struct TerrainTextureMaterialKey {
+    cull_mode: Option<Face>,
+}
+
+impl From<&TerrainTextureMaterial> for TerrainTextureMaterialKey {
+    fn from(value: &TerrainTextureMaterial) -> Self {
+        Self {
+            cull_mode: value.cull_mode,
+        }
+    }
+}
+
 pub const ATTRIBUTE_VOXEL_INDICES: MeshVertexAttribute =
     MeshVertexAttribute::new("VoxelIndices", 987234876, VertexFormat::Uint32);
 
 #[derive(AsBindGroup, Debug, Clone, TypeUuid)]
 #[uuid = "8033ab15-49da-4f1f-b2aa-ecda82927520"]
+#[bind_group_data(TerrainTextureMaterialKey)]
 #[uniform(0, TerrainTextureMaterialUniform)]
 pub struct TerrainTextureMaterial {
     #[texture(1, dimension = "2d_array")]
     #[sampler(2)]
     terrain_texture: Handle<Image>,
     alpha_mode: AlphaMode,
+
+    // FIXME: Back faces often have different lighting from front faces.
+    // Really ugly result.
+    cull_mode: Option<Face>,
+    double_sided: bool,
+}
+
+impl Default for TerrainTextureMaterial {
+    fn default() -> Self {
+        Self {
+            terrain_texture: Handle::default(),
+            alpha_mode: AlphaMode::Opaque,
+            cull_mode: Some(Face::Back),
+            double_sided: false,
+        }
+    }
 }
 
 impl Material for TerrainTextureMaterial {
@@ -112,8 +148,10 @@ impl Material for TerrainTextureMaterial {
         _pipeline: &bevy::pbr::MaterialPipeline<Self>,
         descriptor: &mut bevy::render::render_resource::RenderPipelineDescriptor,
         layout: &bevy::render::mesh::MeshVertexBufferLayout,
-        _key: bevy::pbr::MaterialPipelineKey<Self>,
+        key: bevy::pbr::MaterialPipelineKey<Self>,
     ) -> Result<(), bevy::render::render_resource::SpecializedMeshPipelineError> {
+        descriptor.primitive.cull_mode = key.bind_group_data.cull_mode;
+
         let vertex_layout = layout.get_layout(&[
             Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
             Mesh::ATTRIBUTE_NORMAL.at_shader_location(1),
