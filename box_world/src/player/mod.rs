@@ -9,8 +9,8 @@ use bevy::{
     render::{camera::CameraProjection, primitives::Frustum},
     window::{CursorGrabMode, PrimaryWindow},
 };
-use bevy_asset_loader::prelude::*;
 use bevy_atmosphere::prelude::AtmosphereCamera;
+use bevy_prototype_debug_lines::DebugLinesPlugin;
 use bevy_rapier3d::prelude::{
     Collider, CollisionGroups, Group, NoUserData, RapierConfiguration, RapierPhysicsPlugin,
     SolverGroups,
@@ -18,7 +18,6 @@ use bevy_rapier3d::prelude::{
 
 mod bundle;
 mod camera;
-mod highlight;
 mod input;
 mod movement;
 
@@ -39,16 +38,11 @@ impl Plugin for PlayerPlugin {
             });
         app.insert_resource(MouseSensitivity(1.0));
 
-        app.add_collection_to_loading_state::<_, highlight::HightlightTexture>(
-            GameStates::AssetLoading,
-        );
+        app.add_plugin(DebugLinesPlugin::with_depth_test(true));
 
         app.add_startup_system(spawn_player_load_point);
 
-        app.add_systems(
-            (spawn_player_cam_and_collider, highlight::spawn_highlight)
-                .in_schedule(OnEnter(GameStates::InGame)),
-        );
+        app.add_system(spawn_player_cam_and_collider.in_schedule(OnEnter(GameStates::InGame)));
 
         app.add_systems(
             (

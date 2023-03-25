@@ -2,6 +2,7 @@ use bevy::{
     prelude::*,
     window::{CursorGrabMode, PrimaryWindow},
 };
+use bevy_prototype_debug_lines::DebugShapes;
 
 use crate::{
     chunk::{ChunkData, LoadedChunks},
@@ -9,7 +10,7 @@ use crate::{
     voxel::{GlobalVoxelPos, Voxel, VoxelRegistry},
 };
 
-use super::{highlight::HighlightCube, Player};
+use super::Player;
 
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
@@ -21,10 +22,7 @@ pub(super) fn interact(
     window: Query<&Window, With<PrimaryWindow>>,
     player_position: Query<&Transform, With<Player>>,
     camera: Query<(&Camera, &GlobalTransform)>,
-    mut highlight_cube: Query<
-        (&mut Transform, &mut Visibility),
-        (With<HighlightCube>, Without<Player>),
-    >,
+    mut highlight: ResMut<DebugShapes>,
     mut chunks: Query<&mut ChunkData>,
 ) {
     let window = window.single();
@@ -40,9 +38,6 @@ pub(super) fn interact(
     let player_head_pos = GlobalVoxelPos::from_global_coords(player_translation);
     let player_feet_pos =
         GlobalVoxelPos::new(player_head_pos.x, player_head_pos.y - 1, player_head_pos.z);
-
-    let (mut cube_position, mut cube_visibility) = highlight_cube.single_mut();
-    *cube_visibility = Visibility::Hidden;
 
     let cursor_position = Vec2::new(window.width() / 2., window.height() / 2.);
 
@@ -63,8 +58,11 @@ pub(super) fn interact(
                 .is_empty()
             {
                 // Highlight selected block
-                cube_position.translation = voxel_pos.to_global_coords() + 0.5;
-                *cube_visibility = Visibility::Inherited;
+                highlight
+                    .cuboid()
+                    .position(voxel_pos.to_global_coords() + 0.5)
+                    .size(Vec3::splat(1.02))
+                    .color(Color::BLACK);
 
                 // Interact with selected block
                 let changed = if mouse_input.just_pressed(MouseButton::Left) {

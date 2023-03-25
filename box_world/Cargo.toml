@@ -36,6 +36,7 @@ default = [
   "bevy_rapier3d/debug-render-3d",
   "bevy_rapier3d/simd-nightly",
   "bevy_rapier3d/parallel",
+  "bevy_prototype_debug_lines/3d",
   "bevy_common_assets/ron",
   "bitvec/serde",
   "rusqlite/bundled"
@@ -51,6 +52,7 @@ bevy_rapier3d = { version = "0.21.0", default-features = false }
 bevy_atmosphere = "0.6"
 bevy_common_assets = "0.6.0"
 bevy_asset_loader = "0.15.0"
+bevy_prototype_debug_lines = "0.10.1"
 futures-lite = "*"
 bitvec = "1.0.1"
 noise = { git = "https://github.com/Razaekel/noise-rs.git" }
