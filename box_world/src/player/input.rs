@@ -13,7 +13,7 @@ use crate::{
     voxel::{GlobalVoxelPos, Voxel, VoxelRegistry},
 };
 
-use super::{Player, GRAVITY};
+use super::{highlight::HighlightCube, Player, GRAVITY};
 
 #[derive(Component)]
 pub struct FPSCamera {
@@ -135,6 +135,7 @@ pub(super) fn movement_input(
 }
 
 #[allow(clippy::too_many_arguments)]
+#[allow(clippy::type_complexity)]
 pub(super) fn interact(
     mut commands: Commands,
     voxel_registry: Res<VoxelRegistry>,
@@ -143,6 +144,10 @@ pub(super) fn interact(
     window: Query<&Window, With<PrimaryWindow>>,
     player_position: Query<&Transform, With<Player>>,
     camera: Query<(&Camera, &GlobalTransform)>,
+    mut highlight_cube: Query<
+        (&mut Transform, &mut Visibility),
+        (With<HighlightCube>, Without<Player>),
+    >,
     mut chunks: Query<&mut ChunkData>,
 ) {
     let window = window.single();
@@ -159,6 +164,9 @@ pub(super) fn interact(
     let player_feet_pos =
         GlobalVoxelPos::new(player_head_pos.x, player_head_pos.y - 1, player_head_pos.z);
 
+    let (mut cube_position, mut cube_visibility) = highlight_cube.single_mut();
+    *cube_visibility = Visibility::Hidden;
+
     let cursor_position = Vec2::new(window.width() / 2., window.height() / 2.);
 
     const RAY_STEP: f32 = 0.5;
@@ -173,21 +181,19 @@ pub(super) fn interact(
             let Some(chunk_entity) = loaded_chunks.get_chunk(chunk_pos) else { continue; };
             let Ok(mut chunk_data) = chunks.get_mut(*chunk_entity) else { continue; };
 
-            let changed = if mouse_input.just_pressed(MouseButton::Left) {
-                if !chunk_data
-                    .get(local_pos.x, local_pos.y, local_pos.z)
-                    .is_empty()
-                {
+            if !chunk_data
+                .get(local_pos.x, local_pos.y, local_pos.z)
+                .is_empty()
+            {
+                // Highlight selected block
+                cube_position.translation = voxel_pos.to_global_coords() + 0.5;
+                *cube_visibility = Visibility::Inherited;
+
+                // Interact with selected block
+                let changed = if mouse_input.just_pressed(MouseButton::Left) {
                     chunk_data.set(local_pos.x, local_pos.y, local_pos.z, Voxel::default());
                     true
-                } else {
-                    false
-                }
-            } else if mouse_input.just_pressed(MouseButton::Right) {
-                if !chunk_data
-                    .get(local_pos.x, local_pos.y, local_pos.z)
-                    .is_empty()
-                {
+                } else if mouse_input.just_pressed(MouseButton::Right) {
                     // Place in previous spot
                     let mut prev_voxel_pos = voxel_pos;
 
@@ -229,24 +235,22 @@ pub(super) fn interact(
                     true
                 } else {
                     false
-                }
-            } else {
-                false
-            };
+                };
 
-            if changed {
-                commands.entity(*chunk_entity).insert(NeedsMesh);
+                if changed {
+                    commands.entity(*chunk_entity).insert(NeedsMesh);
 
-                // If change is on a border, update neighbors
-                if local_pos.x == 0
-                    || local_pos.x == ChunkData::edge() - 1
-                    || local_pos.y == 0
-                    || local_pos.y == ChunkData::edge() - 1
-                    || local_pos.z == 0
-                    || local_pos.z == ChunkData::edge() - 1
-                {
-                    for neighbor in loaded_chunks.get_loaded_chunk_neighbors(chunk_pos) {
-                        commands.entity(neighbor).insert(NeedsMesh);
+                    // If change is on a border, update neighbors
+                    if local_pos.x == 0
+                        || local_pos.x == ChunkData::edge() - 1
+                        || local_pos.y == 0
+                        || local_pos.y == ChunkData::edge() - 1
+                        || local_pos.z == 0
+                        || local_pos.z == ChunkData::edge() - 1
+                    {
+                        for neighbor in loaded_chunks.get_loaded_chunk_neighbors(chunk_pos) {
+                            commands.entity(neighbor).insert(NeedsMesh);
+                        }
                     }
                 }
 

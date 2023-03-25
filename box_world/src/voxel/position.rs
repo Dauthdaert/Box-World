@@ -35,6 +35,10 @@ impl GlobalVoxelPos {
         Self(pos.floor().as_ivec3())
     }
 
+    pub fn to_global_coords(self) -> Vec3 {
+        self.0.as_vec3()
+    }
+
     pub fn neighbors(&self) -> [GlobalVoxelPos; 6] {
         [
             GlobalVoxelPos::new(self.x + 1, self.y, self.z),

@@ -7,6 +7,7 @@ use crate::chunk::LoadPoint;
 #[derive(Bundle)]
 pub struct PreSpawnPlayerBundle {
     pub player: Player,
+    pub name: Name,
     pub load_point: LoadPoint,
     #[bundle]
     pub spatial: SpatialBundle,
@@ -16,6 +17,7 @@ impl PreSpawnPlayerBundle {
     pub fn new(horizontal_view_distance: u32, vertical_view_distance: u32, position: Vec3) -> Self {
         Self {
             player: Player,
+            name: Name::new("Player"),
             load_point: LoadPoint {
                 horizontal: horizontal_view_distance,
                 vertical: vertical_view_distance,

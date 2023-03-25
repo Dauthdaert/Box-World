@@ -102,6 +102,7 @@ fn setup(mut commands: Commands) {
             horizontal: 8,
             vertical: 4,
         },
+        Name::new("Spawn"),
     ));
 }
 

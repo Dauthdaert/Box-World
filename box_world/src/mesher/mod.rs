@@ -194,6 +194,7 @@ fn handle_done_meshing_tasks(
                                     (ChunkData::edge() / 2) as f32,
                                 ),
                             },
+                            Name::new("Transparent mesh"),
                         ))
                         .id();
                     commands.entity(chunk_entity).add_child(child);
