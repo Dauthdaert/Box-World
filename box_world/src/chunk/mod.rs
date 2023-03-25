@@ -55,11 +55,7 @@ fn load_around_load_points(
     let mut load_pos = Vec::new();
     for (load_transform, load_distance) in load_query.iter() {
         let load_translation = load_transform.translation;
-        let load_chunk_pos = ChunkPos::from_global_coords(
-            load_translation.x,
-            load_translation.y,
-            load_translation.z,
-        );
+        let load_chunk_pos = ChunkPos::from_global_coords(load_translation);
         load_pos.push((
             load_chunk_pos,
             load_distance.horizontal,

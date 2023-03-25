@@ -1,7 +1,7 @@
 use crate::{
     chunk::{ChunkData, LoadPoint},
     states::GameStates,
-    voxel::VOXEL_SIZE,
+    voxel::{GlobalVoxelPos, VOXEL_SIZE},
     HORIZONTAL_VIEW_DISTANCE, VERTICAL_VIEW_DISTANCE,
 };
 use bevy::{
@@ -56,10 +56,11 @@ pub struct Player;
 fn spawn_player_load_point(mut commands: Commands) {
     // Initially only load a small area around the player for speed
     // We will load to view distance after spawning
+    let player_pos = GlobalVoxelPos::new(5000, 200, 5000);
     commands.spawn(bundle::PreSpawnPlayerBundle::new(
         16,
         10,
-        Vec3::new(10000., 400., 10000.),
+        player_pos.as_vec3() * VOXEL_SIZE,
     ));
 }
 

@@ -24,8 +24,8 @@ mod states;
 mod voxel;
 mod world_generator;
 
-const HORIZONTAL_VIEW_DISTANCE: usize = 32;
-const VERTICAL_VIEW_DISTANCE: usize = 12;
+const HORIZONTAL_VIEW_DISTANCE: u32 = 32;
+const VERTICAL_VIEW_DISTANCE: u32 = 12;
 
 pub fn app() -> App {
     let mut app = App::new();
@@ -126,7 +126,7 @@ fn transition_after_load(
         info!("Don't worry, we're still loading.");
 
         let player = player.single().translation;
-        let player_chunk_pos = ChunkPos::from_global_coords(player.x, player.y, player.z);
+        let player_chunk_pos = ChunkPos::from_global_coords(player);
 
         // Check current chunk
         let Some(current) = loaded_chunks.get_chunk(player_chunk_pos) else { return; };

@@ -33,11 +33,11 @@ impl Default for ChunkData {
 
 #[allow(dead_code)]
 impl ChunkData {
-    pub fn get(&self, x: usize, y: usize, z: usize) -> Voxel {
+    pub fn get(&self, x: u32, y: u32, z: u32) -> Voxel {
         self.voxels.get(Self::linearize(x, y, z))
     }
 
-    pub fn set(&mut self, x: usize, y: usize, z: usize, voxel: Voxel) {
+    pub fn set(&mut self, x: u32, y: u32, z: u32, voxel: Voxel) {
         self.voxels.set(Self::linearize(x, y, z), voxel);
         self.change_count += 1;
         self.set_dirty(true);
@@ -71,23 +71,23 @@ impl ChunkData {
         self.voxels.trim();
     }
 
-    pub const fn size() -> usize {
-        ChunkShape::USIZE
+    pub const fn size() -> u32 {
+        ChunkShape::USIZE as u32
     }
 
-    pub const fn edge() -> usize {
-        CHUNK_EDGE
-    }
-
-    #[inline]
-    pub fn linearize(x: usize, y: usize, z: usize) -> usize {
-        ChunkShape::linearize([x, y, z])
+    pub const fn edge() -> u32 {
+        CHUNK_EDGE as u32
     }
 
     #[inline]
-    pub fn delinearize(idx: usize) -> (usize, usize, usize) {
+    pub fn linearize(x: u32, y: u32, z: u32) -> usize {
+        ChunkShape::linearize([x as usize, y as usize, z as usize])
+    }
+
+    #[inline]
+    pub fn delinearize(idx: usize) -> (u32, u32, u32) {
         let res = ChunkShape::delinearize(idx);
-        (res[0], res[1], res[2])
+        (res[0] as u32, res[1] as u32, res[2] as u32)
     }
 
     pub fn from_raw(raw_chunk: RawChunk) -> Self {

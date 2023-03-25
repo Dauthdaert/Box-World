@@ -10,7 +10,7 @@ use zstd::stream::copy_decode;
 use crate::{
     chunk::{ChunkData, ChunkPos, Database, LoadedChunks},
     mesher::NeedsMesh,
-    voxel::{VoxelPos, VoxelRegistry},
+    voxel::{ChunkLocalVoxelPos, GlobalVoxelPos, VoxelRegistry},
 };
 
 pub struct GeneratorPlugin;
@@ -82,7 +82,7 @@ fn enqueue_chunk_generation_tasks(
                 for z in 0..ChunkData::edge() {
                     for y in 0..ChunkData::edge() {
                         for x in 0..ChunkData::edge() {
-                            let voxel_pos = VoxelPos::from_chunk_coords(pos, x, y, z);
+                            let voxel_pos = GlobalVoxelPos::from_chunk_local(pos, ChunkLocalVoxelPos::new(x, y, z));
                             let voxel = if voxel_pos.y <= 20 {
                                 if voxel_pos.y < 17 {
                                     // Empty bottom chunk

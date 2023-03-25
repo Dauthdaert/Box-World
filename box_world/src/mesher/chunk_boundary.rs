@@ -2,11 +2,11 @@ use ndshape::{ConstShape, ConstShape3usize};
 
 use crate::{chunk::ChunkData, voxel::Voxel};
 
-const BOUNDARY_EDGE: usize = ChunkData::edge() + 2;
+const BOUNDARY_EDGE: usize = ChunkData::edge() as usize + 2;
 type BoundaryShape = ConstShape3usize<BOUNDARY_EDGE, BOUNDARY_EDGE, BOUNDARY_EDGE>;
 
 pub struct ChunkBoundary {
-    voxels: Box<[Voxel; BoundaryShape::SIZE]>,
+    voxels: Box<[Voxel; BoundaryShape::USIZE]>,
 }
 
 #[allow(dead_code)]
@@ -15,12 +15,12 @@ impl ChunkBoundary {
         // Must have 26 neighbors
         assert!(neighbors.len() == 26);
 
-        const MAX: usize = ChunkData::edge();
-        const BOUND: usize = MAX + 1;
+        const MAX: u32 = ChunkData::edge();
+        const BOUND: u32 = MAX + 1;
 
-        let voxels: Box<[Voxel; BoundaryShape::SIZE]> = (0..BoundaryShape::SIZE)
+        let voxels: Box<[Voxel; BoundaryShape::USIZE]> = (0..BoundaryShape::SIZE)
             .map(|idx| {
-                let [x, y, z] = BoundaryShape::delinearize(idx);
+                let (x, y, z) = ChunkBoundary::delinearize(idx);
                 match (x, y, z) {
                     (0, 0, 0) => neighbors[0].get(MAX - 1, MAX - 1, MAX - 1),
                     (0, 0, 1..=MAX) => neighbors[1].get(MAX - 1, MAX - 1, z - 1),
@@ -64,21 +64,21 @@ impl ChunkBoundary {
         &self.voxels
     }
 
-    pub const fn edge() -> usize {
-        BOUNDARY_EDGE
+    pub const fn edge() -> u32 {
+        BOUNDARY_EDGE as u32
     }
 
-    pub const fn size() -> usize {
-        BoundaryShape::SIZE
+    pub const fn size() -> u32 {
+        BoundaryShape::SIZE as u32
     }
 
-    pub fn linearize(x: usize, y: usize, z: usize) -> usize {
-        BoundaryShape::linearize([x, y, z])
+    pub fn linearize(x: u32, y: u32, z: u32) -> usize {
+        BoundaryShape::linearize([x as usize, y as usize, z as usize])
     }
 
-    pub fn delinearize(idx: usize) -> (usize, usize, usize) {
+    pub fn delinearize(idx: usize) -> (u32, u32, u32) {
         let res = BoundaryShape::delinearize(idx);
-        (res[0], res[1], res[2])
+        (res[0] as u32, res[1] as u32, res[2] as u32)
     }
 
     pub fn x_offset() -> usize {

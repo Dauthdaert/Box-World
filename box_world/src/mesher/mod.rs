@@ -120,7 +120,7 @@ fn handle_done_meshing_tasks(
 ) {
     mesh_tasks.for_each_mut(|(chunk_entity, children, pos, transform, mut task)| {
         if let Some(computed_mesh) = future::block_on(future::poll_once(&mut task.0)) {
-            let (chunk_world_x, chunk_world_y, chunk_world_z) = pos.to_global_coords();
+            let chunk_world_pos = pos.to_global_coords();
             let mut solid_commands = commands.entity(chunk_entity);
 
             let solid_mesh = computed_mesh.solid_mesh;
@@ -138,11 +138,7 @@ fn handle_done_meshing_tasks(
                         MaterialMeshBundle {
                             material: terrain_texture.opaque().clone_weak(),
                             mesh: meshes.add(solid_mesh),
-                            transform: Transform::from_xyz(
-                                chunk_world_x,
-                                chunk_world_y,
-                                chunk_world_z,
-                            ),
+                            transform: Transform::from_translation(chunk_world_pos),
                             ..default()
                         },
                         Aabb {

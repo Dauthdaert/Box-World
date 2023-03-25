@@ -6,7 +6,7 @@ use super::{
 
 #[derive(Copy, Clone, Debug)]
 pub struct Quad {
-    pub voxel: [usize; 3],
+    pub voxel: [u32; 3],
     pub texture_indice: u32,
     pub width: u32,
     pub height: u32,
