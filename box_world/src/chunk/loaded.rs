@@ -94,7 +94,6 @@ impl LoadedChunks {
     }
 
     fn unload(&mut self, pos: ChunkPos) -> Entity {
-        // TODO: Save unloaded chunks to persistent storage
         self.chunks
             .remove(&pos)
             .expect("Chunk should exist at ChunkPos for unloading")
