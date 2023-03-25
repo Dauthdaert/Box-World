@@ -2,8 +2,6 @@ use bevy::prelude::{Component, Deref, DerefMut, IVec3, UVec3, Vec3};
 
 use crate::chunk::{ChunkData, ChunkPos};
 
-use super::Voxel;
-
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash, Deref, DerefMut)]
 pub struct GlobalVoxelPos(IVec3);
 
@@ -24,11 +22,7 @@ impl GlobalVoxelPos {
 
     pub fn to_chunk_local(self) -> (ChunkPos, ChunkLocalVoxelPos) {
         (
-            ChunkPos::new(
-                self.x / ChunkData::edge() as i32,
-                self.y / ChunkData::edge() as i32,
-                self.z / ChunkData::edge() as i32,
-            ),
+            ChunkPos::from_global_coords(self.0.as_vec3()),
             ChunkLocalVoxelPos::new(
                 self.x.rem_euclid(ChunkData::edge() as i32) as u32,
                 self.y.rem_euclid(ChunkData::edge() as i32) as u32,
@@ -37,12 +31,8 @@ impl GlobalVoxelPos {
         )
     }
 
-    pub fn from_global_coords(x: f32, y: f32, z: f32) -> Self {
-        Self(IVec3::new(
-            (x / Voxel::size()).floor() as i32,
-            (y / Voxel::size()).floor() as i32,
-            (z / Voxel::size()).floor() as i32,
-        ))
+    pub fn from_global_coords(pos: Vec3) -> Self {
+        Self(pos.floor().as_ivec3())
     }
 
     pub fn neighbors(&self) -> [GlobalVoxelPos; 6] {

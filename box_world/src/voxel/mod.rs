@@ -1,7 +1,5 @@
 use bevy::prelude::{App, Plugin};
 
-pub const VOXEL_SIZE: f32 = 2.0;
-
 mod data;
 mod position;
 mod registry;

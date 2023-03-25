@@ -2,8 +2,6 @@ use std::ops::Mul;
 
 use bevy::prelude::{Component, Deref, DerefMut, IVec3, Vec3};
 
-use crate::voxel::Voxel;
-
 use super::ChunkData;
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Hash, Deref, DerefMut)]
@@ -23,15 +21,11 @@ impl ChunkPos {
     }
 
     pub fn from_global_coords(pos: Vec3) -> Self {
-        ChunkPos(
-            (pos / (Voxel::size() * ChunkData::edge() as f32))
-                .floor()
-                .as_ivec3(),
-        )
+        ChunkPos((pos / ChunkData::edge() as f32).floor().as_ivec3())
     }
 
     pub fn to_global_coords(self) -> Vec3 {
-        (self.0 * ChunkData::edge() as i32).as_vec3() * Voxel::size()
+        (self.0 * ChunkData::edge() as i32).as_vec3()
     }
 
     pub fn neighbors(&self) -> Vec<ChunkPos> {

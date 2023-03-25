@@ -10,10 +10,10 @@ use bevy_rapier3d::prelude::Vect;
 use crate::{
     chunk::{ChunkData, ChunkPos, LoadedChunks},
     mesher::NeedsMesh,
-    voxel::{GlobalVoxelPos, Voxel, VoxelRegistry, VOXEL_SIZE},
+    voxel::{GlobalVoxelPos, Voxel, VoxelRegistry},
 };
 
-use super::Player;
+use super::{Player, GRAVITY};
 
 #[derive(Component)]
 pub struct FPSCamera {
@@ -34,6 +34,10 @@ impl Default for FPSCamera {
 
 #[derive(Resource)]
 pub struct MouseSensitivity(pub f32);
+
+const PLAYER_JUMP_SPEED: f32 = 10.0;
+const PLAYER_RUN_SPEED: f32 = 5.0;
+const PLAYER_SPRINT_MOD: f32 = 2.0;
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn movement_input(
@@ -98,7 +102,7 @@ pub(super) fn movement_input(
 
                 if key_events.pressed(KeyCode::Space) && *stationary_frames > 2 {
                     *stationary_frames = 0;
-                    fps_camera.velocity.y = 16.0;
+                    fps_camera.velocity.y = PLAYER_JUMP_SPEED;
                 }
             }
 
@@ -114,9 +118,9 @@ pub(super) fn movement_input(
             fps_camera.velocity.y = 0.0;
             fps_camera.velocity = movement;
             if key_events.pressed(KeyCode::LShift) {
-                fps_camera.velocity *= 20.0;
+                fps_camera.velocity *= PLAYER_RUN_SPEED * PLAYER_SPRINT_MOD;
             } else {
-                fps_camera.velocity *= 10.0;
+                fps_camera.velocity *= PLAYER_RUN_SPEED;
             }
             fps_camera.velocity.y = y;
             let chunk_pos = ChunkPos::from_global_coords(translation);
@@ -125,7 +129,7 @@ pub(super) fn movement_input(
                 return;
             }
 
-            fps_camera.velocity.y -= 35.0 * time.delta().as_secs_f32().clamp(0.0, 0.1);
+            fps_camera.velocity.y -= GRAVITY * time.delta().as_secs_f32().clamp(0.0, 0.1);
         }
     }
 }
@@ -151,23 +155,19 @@ pub(super) fn interact(
     let player_equipped_block = voxel_registry.get_voxel("stone");
 
     let player_translation = player_position.single().translation;
-    let player_head_pos = GlobalVoxelPos::from_global_coords(
-        player_translation.x,
-        player_translation.y,
-        player_translation.z,
-    );
+    let player_head_pos = GlobalVoxelPos::from_global_coords(player_translation);
     let player_feet_pos =
         GlobalVoxelPos::new(player_head_pos.x, player_head_pos.y - 1, player_head_pos.z);
 
     let cursor_position = Vec2::new(window.width() / 2., window.height() / 2.);
 
-    const RAY_STEP: f32 = VOXEL_SIZE / 2.0;
+    const RAY_STEP: f32 = 0.5;
     for (camera, camera_transform) in camera.iter() {
         let Some(ray) = camera.viewport_to_world(camera_transform, cursor_position) else { return; };
 
         for i in 1..10 {
             let ray_pos = ray.get_point(i as f32 * RAY_STEP);
-            let voxel_pos = GlobalVoxelPos::from_global_coords(ray_pos.x, ray_pos.y, ray_pos.z);
+            let voxel_pos = GlobalVoxelPos::from_global_coords(ray_pos);
             let (mut chunk_pos, mut local_pos) = voxel_pos.to_chunk_local();
 
             let Some(chunk_entity) = loaded_chunks.get_chunk(chunk_pos) else { continue; };
@@ -194,11 +194,7 @@ pub(super) fn interact(
                     // Rewind ray backwards by one voxel
                     for j in 1..i {
                         let prev_ray_pos = ray.get_point((i - j) as f32 * RAY_STEP);
-                        prev_voxel_pos = GlobalVoxelPos::from_global_coords(
-                            prev_ray_pos.x,
-                            prev_ray_pos.y,
-                            prev_ray_pos.z,
-                        );
+                        prev_voxel_pos = GlobalVoxelPos::from_global_coords(prev_ray_pos);
 
                         if prev_voxel_pos != voxel_pos {
                             break;
