@@ -115,7 +115,7 @@ impl<'a> Face<'a> {
         }
     }
 
-    pub fn voxel(&self) -> [usize; 3] {
+    pub fn voxel(&self) -> [u32; 3] {
         self.quad.voxel
     }
 }

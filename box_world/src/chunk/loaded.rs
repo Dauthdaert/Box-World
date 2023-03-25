@@ -47,8 +47,8 @@ impl Database {
 
 #[derive(Component, Default)]
 pub struct LoadPoint {
-    pub horizontal: usize,
-    pub vertical: usize,
+    pub horizontal: u32,
+    pub vertical: u32,
 }
 
 #[derive(Resource)]
@@ -67,27 +67,20 @@ impl LoadedChunks {
         self.chunks.insert(pos, entity);
     }
 
-    pub fn load_inside_range(&mut self, pos_lit: &[(ChunkPos, usize, usize)]) -> Vec<ChunkPos> {
+    pub fn load_inside_range(&mut self, pos_lit: &[(ChunkPos, u32, u32)]) -> Vec<ChunkPos> {
         let mut to_load = HashSet::new();
         for (pos, horizontal_distance, vertical_distance) in pos_lit.iter().copied() {
-            for z in 0..=horizontal_distance * 2 {
-                for y in 0..=vertical_distance * 2 {
-                    for x in 0..=horizontal_distance * 2 {
-                        if pos.x + x < horizontal_distance
-                            || pos.y + y < vertical_distance
-                            || pos.z + z < horizontal_distance
-                        {
-                            continue;
-                        }
+            let horizontal_distance = horizontal_distance as i32;
+            let horizontal_distance_squared = horizontal_distance * horizontal_distance;
+            let vertical_distance = vertical_distance as i32;
 
-                        let other_pos = ChunkPos::new(
-                            pos.x + x - horizontal_distance,
-                            pos.y + y - vertical_distance,
-                            pos.z + z - horizontal_distance,
-                        );
+            for z in -horizontal_distance..=horizontal_distance {
+                for y in -vertical_distance..=vertical_distance {
+                    for x in -horizontal_distance..=horizontal_distance {
+                        let other_pos = ChunkPos::new(pos.x + x, pos.y + y, pos.z + z);
 
-                        let chunk_distance = pos.distance(&other_pos);
-                        if chunk_distance < horizontal_distance as f32
+                        let chunk_distance = pos.distance_squared(&other_pos);
+                        if chunk_distance <= horizontal_distance_squared as f32
                             && !self.chunks.contains_key(&other_pos)
                         {
                             to_load.insert(other_pos);
@@ -101,19 +94,17 @@ impl LoadedChunks {
     }
 
     fn unload(&mut self, pos: ChunkPos) -> Entity {
-        // TODO: Save unloaded chunks to persistent storage
         self.chunks
             .remove(&pos)
             .expect("Chunk should exist at ChunkPos for unloading")
     }
 
-    pub fn unload_outside_range(&mut self, pos_list: &[(ChunkPos, usize, usize)]) -> Vec<Entity> {
+    pub fn unload_outside_range(&mut self, pos_list: &[(ChunkPos, u32, u32)]) -> Vec<Entity> {
         let mut to_remove = Vec::new();
         self.chunks.keys().for_each(|other_pos| {
-            if pos_list
-                .iter()
-                .all(|(pos, horizontal, _vertical)| pos.distance(other_pos) > *horizontal as f32)
-            {
+            if pos_list.iter().all(|(pos, horizontal, _vertical)| {
+                pos.distance_squared(other_pos) > (horizontal * horizontal) as f32
+            }) {
                 to_remove.push(*other_pos);
             }
         });

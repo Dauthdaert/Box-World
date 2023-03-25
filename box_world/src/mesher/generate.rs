@@ -3,8 +3,6 @@ use bevy::{
     render::{mesh::Indices, render_resource::PrimitiveTopology},
 };
 
-use crate::voxel::Voxel;
-
 use super::{
     chunk_boundary::ChunkBoundary,
     quads::{generate_quads_with_buffer, QuadGroups},
@@ -48,7 +46,7 @@ pub fn generate_mesh_with_buffer(
 
     for face in buffer.iter_with_ao(chunk) {
         indices.extend_from_slice(&face.indices(positions.len() as u32));
-        positions.extend_from_slice(&face.positions(Voxel::size()));
+        positions.extend_from_slice(&face.positions(1.0));
         normals.extend_from_slice(&face.normals());
         tex_coords.extend_from_slice(&face.uvs(false, true));
         ao.extend_from_slice(&face.aos());

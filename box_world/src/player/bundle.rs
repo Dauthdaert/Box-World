@@ -13,11 +13,7 @@ pub struct PreSpawnPlayerBundle {
 }
 
 impl PreSpawnPlayerBundle {
-    pub fn new(
-        horizontal_view_distance: usize,
-        vertical_view_distance: usize,
-        position: Vec3,
-    ) -> Self {
+    pub fn new(horizontal_view_distance: u32, vertical_view_distance: u32, position: Vec3) -> Self {
         Self {
             player: Player,
             load_point: LoadPoint {

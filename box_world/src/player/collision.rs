@@ -23,11 +23,11 @@ pub(super) fn movement(
         let mut camera_t = transforms.get_mut(entity_camera).unwrap();
         camera_t.look_at(looking_at, Vec3::new(0.0, 1.0, 0.0));
 
-        let shape = Collider::cylinder(1.490, 0.4);
-        let feet_shape = Collider::cylinder(0.10, 0.4);
+        let shape = Collider::cylinder(0.745, 0.2);
+        let feet_shape = Collider::cylinder(0.05, 0.2);
 
         let mut movement_left = fps_camera.velocity * time.delta().as_secs_f32();
-        let leg_height = 0.52;
+        let leg_height = 0.26;
 
         let filter = QueryFilter {
             flags: Default::default(),
@@ -42,7 +42,7 @@ pub(super) fn movement(
                 break;
             }
             let mut player_transform = transforms.get_mut(entity_player).unwrap();
-            let position = player_transform.translation - Vec3::new(0.0, 0.910, 0.0);
+            let position = player_transform.translation - Vec3::new(0.0, 0.495, 0.0);
 
             match rapier_context.cast_shape(
                 position,
@@ -54,7 +54,7 @@ pub(super) fn movement(
             ) {
                 None => {
                     player_transform.translation =
-                        position + movement_left + Vec3::new(0.0, 0.910, 0.0);
+                        position + movement_left + Vec3::new(0.0, 0.495, 0.0);
                     break;
                 }
                 Some((collision_entity, toi)) => {
@@ -74,7 +74,7 @@ pub(super) fn movement(
 
         if fps_camera.velocity.y <= 0.0 {
             let position =
-                transforms.get(entity_player).unwrap().translation - Vec3::new(0.0, 2.38, 0.0);
+                transforms.get(entity_player).unwrap().translation - Vec3::new(0.0, 1.19, 0.0);
 
             if let Some((_, toi)) = rapier_context.cast_shape(
                 position,

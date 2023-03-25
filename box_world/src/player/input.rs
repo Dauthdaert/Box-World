@@ -10,10 +10,10 @@ use bevy_rapier3d::prelude::Vect;
 use crate::{
     chunk::{ChunkData, ChunkPos, LoadedChunks},
     mesher::NeedsMesh,
-    voxel::{Voxel, VoxelPos, VoxelRegistry, VOXEL_SIZE},
+    voxel::{GlobalVoxelPos, Voxel, VoxelRegistry},
 };
 
-use super::{highlight::HighlightCube, Player};
+use super::{highlight::HighlightCube, Player, GRAVITY};
 
 #[derive(Component)]
 pub struct FPSCamera {
@@ -34,6 +34,10 @@ impl Default for FPSCamera {
 
 #[derive(Resource)]
 pub struct MouseSensitivity(pub f32);
+
+const PLAYER_JUMP_SPEED: f32 = 10.0;
+const PLAYER_RUN_SPEED: f32 = 5.0;
+const PLAYER_SPRINT_MOD: f32 = 2.0;
 
 #[allow(clippy::too_many_arguments)]
 pub(super) fn movement_input(
@@ -60,11 +64,7 @@ pub(super) fn movement_input(
     if let Ok(translation) = player_position.get_single() {
         let translation = translation.translation;
         if current_chunks
-            .get_chunk(ChunkPos::from_global_coords(
-                translation.x,
-                translation.y,
-                translation.z,
-            ))
+            .get_chunk(ChunkPos::from_global_coords(translation))
             .is_none()
         {
             return;
@@ -102,7 +102,7 @@ pub(super) fn movement_input(
 
                 if key_events.pressed(KeyCode::Space) && *stationary_frames > 2 {
                     *stationary_frames = 0;
-                    fps_camera.velocity.y = 16.0;
+                    fps_camera.velocity.y = PLAYER_JUMP_SPEED;
                 }
             }
 
@@ -118,19 +118,18 @@ pub(super) fn movement_input(
             fps_camera.velocity.y = 0.0;
             fps_camera.velocity = movement;
             if key_events.pressed(KeyCode::LShift) {
-                fps_camera.velocity *= 20.0;
+                fps_camera.velocity *= PLAYER_RUN_SPEED * PLAYER_SPRINT_MOD;
             } else {
-                fps_camera.velocity *= 10.0;
+                fps_camera.velocity *= PLAYER_RUN_SPEED;
             }
             fps_camera.velocity.y = y;
-            let chunk_pos =
-                ChunkPos::from_global_coords(translation.x, translation.y, translation.z);
+            let chunk_pos = ChunkPos::from_global_coords(translation);
 
             if current_chunks.get_chunk(chunk_pos).is_none() {
                 return;
             }
 
-            fps_camera.velocity.y -= 35.0 * time.delta().as_secs_f32().clamp(0.0, 0.1);
+            fps_camera.velocity.y -= GRAVITY * time.delta().as_secs_f32().clamp(0.0, 0.1);
         }
     }
 }
@@ -157,37 +156,35 @@ pub(super) fn interact(
     let player_equipped_block = voxel_registry.get_voxel("stone");
 
     let player_translation = player_position.single().translation;
-    let player_head_pos = VoxelPos::from_global_coords(
-        player_translation.x,
-        player_translation.y,
-        player_translation.z,
-    );
+    let player_head_pos = GlobalVoxelPos::from_global_coords(player_translation);
     let player_feet_pos =
-        VoxelPos::new(player_head_pos.x, player_head_pos.y - 1, player_head_pos.z);
+        GlobalVoxelPos::new(player_head_pos.x, player_head_pos.y - 1, player_head_pos.z);
 
     let cursor_position = Vec2::new(window.width() / 2., window.height() / 2.);
 
-    const RAY_STEP: f32 = VOXEL_SIZE / 2.0;
+    const RAY_STEP: f32 = 0.5;
     for (camera, camera_transform) in camera.iter() {
         let Some(ray) = camera.viewport_to_world(camera_transform, cursor_position) else { return; };
 
         for i in 1..10 {
             let ray_pos = ray.get_point(i as f32 * RAY_STEP);
-            let voxel_pos = VoxelPos::from_global_coords(ray_pos.x, ray_pos.y, ray_pos.z);
-            let (mut chunk_pos, mut local_x, mut local_y, mut local_z) =
-                voxel_pos.to_chunk_coords();
+            let voxel_pos = GlobalVoxelPos::from_global_coords(ray_pos);
+            let (mut chunk_pos, mut local_pos) = voxel_pos.to_chunk_local();
 
             let Some(chunk_entity) = loaded_chunks.get_chunk(chunk_pos) else { continue; };
             let Ok(mut chunk_data) = chunks.get_mut(*chunk_entity) else { continue; };
 
-            if !chunk_data.get(local_x, local_y, local_z).is_empty() {
+            if !chunk_data
+                .get(local_pos.x, local_pos.y, local_pos.z)
+                .is_empty()
+            {
                 // Highlight selected block
                 let mut hightlight_cube = highlight_cube.single_mut();
                 hightlight_cube.translation = voxel_pos.to_global_coords();
 
                 // Interact with selected block
                 let changed = if mouse_input.just_pressed(MouseButton::Left) {
-                    chunk_data.set(local_x, local_y, local_z, Voxel::default());
+                    chunk_data.set(local_pos.x, local_pos.y, local_pos.z, Voxel::default());
                     true
                 } else if mouse_input.just_pressed(MouseButton::Right) {
                     // Place in previous spot
@@ -196,11 +193,7 @@ pub(super) fn interact(
                     // Rewind ray backwards by one voxel
                     for j in 1..i {
                         let prev_ray_pos = ray.get_point((i - j) as f32 * RAY_STEP);
-                        prev_voxel_pos = VoxelPos::from_global_coords(
-                            prev_ray_pos.x,
-                            prev_ray_pos.y,
-                            prev_ray_pos.z,
-                        );
+                        prev_voxel_pos = GlobalVoxelPos::from_global_coords(prev_ray_pos);
 
                         if prev_voxel_pos != voxel_pos {
                             break;
@@ -212,8 +205,7 @@ pub(super) fn interact(
                         return;
                     }
 
-                    let (prev_chunk_pos, prev_local_x, prev_local_y, prev_local_z) =
-                        prev_voxel_pos.to_chunk_coords();
+                    let (prev_chunk_pos, prev_local_pos) = prev_voxel_pos.to_chunk_local();
 
                     let mut prev_chunk_data = if chunk_pos == prev_chunk_pos {
                         chunk_data
@@ -223,17 +215,15 @@ pub(super) fn interact(
                         chunk_data
                     };
                     prev_chunk_data.set(
-                        prev_local_x,
-                        prev_local_y,
-                        prev_local_z,
+                        prev_local_pos.x,
+                        prev_local_pos.y,
+                        prev_local_pos.z,
                         player_equipped_block,
                     );
 
                     // Propagate change of voxel position
                     chunk_pos = prev_chunk_pos;
-                    local_x = prev_local_x;
-                    local_y = prev_local_y;
-                    local_z = prev_local_z;
+                    local_pos = prev_local_pos;
 
                     true
                 } else {
@@ -244,12 +234,12 @@ pub(super) fn interact(
                     commands.entity(*chunk_entity).insert(NeedsMesh);
 
                     // If change is on a border, update neighbors
-                    if local_x == 0
-                        || local_x == ChunkData::edge() - 1
-                        || local_y == 0
-                        || local_y == ChunkData::edge() - 1
-                        || local_z == 0
-                        || local_z == ChunkData::edge() - 1
+                    if local_pos.x == 0
+                        || local_pos.x == ChunkData::edge() - 1
+                        || local_pos.y == 0
+                        || local_pos.y == ChunkData::edge() - 1
+                        || local_pos.z == 0
+                        || local_pos.z == ChunkData::edge() - 1
                     {
                         for neighbor in loaded_chunks.get_loaded_chunk_neighbors(chunk_pos) {
                             commands.entity(neighbor).insert(NeedsMesh);

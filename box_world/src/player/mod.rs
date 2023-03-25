@@ -1,7 +1,7 @@
 use crate::{
     chunk::{ChunkData, LoadPoint},
     states::GameStates,
-    voxel::VOXEL_SIZE,
+    voxel::GlobalVoxelPos,
     HORIZONTAL_VIEW_DISTANCE, VERTICAL_VIEW_DISTANCE,
 };
 use bevy::{
@@ -23,6 +23,8 @@ mod collision;
 mod highlight;
 mod input;
 
+const GRAVITY: f32 = 25.0;
+
 pub struct PlayerPlugin;
 
 /// Implements player controller
@@ -31,7 +33,7 @@ impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
         app.add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
             .insert_resource(RapierConfiguration {
-                gravity: Vec3::new(0.0, -35.0, 0.0),
+                gravity: Vec3::new(0.0, -GRAVITY, 0.0),
                 ..default()
             });
         app.insert_resource(MouseSensitivity(1.0));
@@ -65,10 +67,11 @@ pub struct Player;
 fn spawn_player_load_point(mut commands: Commands) {
     // Initially only load a small area around the player for speed
     // We will load to view distance after spawning
+    let player_pos = GlobalVoxelPos::new(5000, 200, 5000);
     commands.spawn(bundle::PreSpawnPlayerBundle::new(
         16,
         10,
-        Vec3::new(10000., 400., 10000.),
+        player_pos.as_vec3(),
     ));
 }
 
@@ -125,10 +128,8 @@ pub fn spawn_player_cam_and_collider(
                 FogSettings {
                     color: Color::rgba(0.5, 0.5, 0.5, 1.0),
                     falloff: FogFalloff::Linear {
-                        start: ((HORIZONTAL_VIEW_DISTANCE - 4) * ChunkData::edge()) as f32
-                            * VOXEL_SIZE,
-                        end: ((HORIZONTAL_VIEW_DISTANCE - 2) * ChunkData::edge()) as f32
-                            * VOXEL_SIZE,
+                        start: ((HORIZONTAL_VIEW_DISTANCE - 4) * ChunkData::edge()) as f32,
+                        end: ((HORIZONTAL_VIEW_DISTANCE - 2) * ChunkData::edge()) as f32,
                     },
                     ..default()
                 },

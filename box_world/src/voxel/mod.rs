@@ -1,7 +1,5 @@
 use bevy::prelude::{App, Plugin};
 
-pub const VOXEL_SIZE: f32 = 2.0;
-
 mod data;
 mod position;
 mod registry;
@@ -9,7 +7,8 @@ mod registry;
 use bevy_asset_loader::prelude::*;
 use bevy_common_assets::ron::RonAssetPlugin;
 pub use data::Voxel;
-pub use position::VoxelPos;
+pub use position::ChunkLocalVoxelPos;
+pub use position::GlobalVoxelPos;
 pub use registry::VoxelRegistry;
 
 use crate::states::GameStates;
