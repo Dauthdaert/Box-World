@@ -16,12 +16,13 @@ use bevy_rapier3d::prelude::{
     SolverGroups,
 };
 
-use self::input::{FPSCamera, MouseSensitivity};
-
 mod bundle;
-mod collision;
+mod camera;
 mod highlight;
 mod input;
+mod movement;
+
+use camera::{FPSCamera, MouseSensitivity};
 
 const GRAVITY: f32 = 25.0;
 
@@ -51,13 +52,12 @@ impl Plugin for PlayerPlugin {
 
         app.add_systems(
             (
-                input::movement_input,
-                input::interact.after(collision::movement),
+                movement::movement_input,
+                movement::movement_collision,
+                input::interact.after(movement::movement_collision),
             )
                 .in_set(OnUpdate(GameStates::InGame)),
         );
-
-        app.add_system(collision::movement.run_if(in_state::<GameStates>(GameStates::InGame)));
     }
 }
 
