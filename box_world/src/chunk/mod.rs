@@ -1,4 +1,8 @@
-use crate::world_generator::NeedsChunkData;
+use crate::{
+    states::GameStates,
+    voxel::{GlobalVoxelPos, Voxel},
+    world_generator::NeedsChunkData,
+};
 use bevy::app::AppExit;
 use bevy::prelude::*;
 use bevy::tasks::AsyncComputeTaskPool;
@@ -6,13 +10,36 @@ use rand::seq::IteratorRandom;
 
 mod data;
 mod database;
+mod lighting;
 mod loaded;
 mod position;
 mod storage;
 
 pub use data::ChunkData;
+pub use lighting::{to_sunlight, to_torchlight};
 pub use loaded::{Database, LoadPoint, LoadedChunks};
 pub use position::ChunkPos;
+
+pub struct VoxelAddedEvent {
+    pos: GlobalVoxelPos,
+    value: Voxel,
+}
+
+impl VoxelAddedEvent {
+    pub fn new(pos: GlobalVoxelPos, value: Voxel) -> Self {
+        Self { pos, value }
+    }
+}
+
+pub struct VoxelRemovedEvent {
+    pos: GlobalVoxelPos,
+}
+
+impl VoxelRemovedEvent {
+    pub fn new(pos: GlobalVoxelPos) -> Self {
+        Self { pos }
+    }
+}
 
 pub struct ChunkPlugin;
 
@@ -31,6 +58,10 @@ impl Plugin for ChunkPlugin {
                 .run_if(on_event::<AppExit>())
                 .in_base_set(CoreSet::Last),
         );
+
+        app.add_event::<VoxelAddedEvent>()
+            .add_event::<VoxelRemovedEvent>();
+        app.add_system(lighting::propagate_lighting.run_if(in_state(GameStates::InGame)));
     }
 }
 
@@ -77,7 +108,7 @@ fn load_around_load_points(
                         to_save.push((*chunk_pos, chunk_data.to_raw()));
                     }
                 }
-                commands.entity(*entity).despawn();
+                commands.entity(*entity).despawn_recursive();
             }
 
             if !to_save.is_empty() {

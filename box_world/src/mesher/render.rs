@@ -103,6 +103,8 @@ impl From<&TerrainTextureMaterial> for TerrainTextureMaterialKey {
 
 pub const ATTRIBUTE_VOXEL_INDICES: MeshVertexAttribute =
     MeshVertexAttribute::new("VoxelIndices", 987234876, VertexFormat::Uint32);
+pub const ATTRIBUTE_VOXEL_LIGHTS: MeshVertexAttribute =
+    MeshVertexAttribute::new("VoxelLights", 187234876, VertexFormat::Float32x2);
 
 #[derive(AsBindGroup, Debug, Clone, TypeUuid)]
 #[uuid = "8033ab15-49da-4f1f-b2aa-ecda82927520"]
@@ -161,6 +163,7 @@ impl Material for TerrainTextureMaterial {
             // Pos 5: JOINT_INDEX
             // Pos 6: JOINT_HEIGHT
             ATTRIBUTE_VOXEL_INDICES.at_shader_location(7),
+            ATTRIBUTE_VOXEL_LIGHTS.at_shader_location(8),
         ])?;
         descriptor.vertex.buffers = vec![vertex_layout];
         Ok(())

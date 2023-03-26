@@ -27,7 +27,8 @@ struct FragmentInput {
     @builtin(position) frag_coord: vec4<f32>,
     #import bevy_pbr::mesh_vertex_output
 
-    @location(5) voxel_indice: u32
+    @location(5) voxel_indice: u32,
+    @location(6) voxel_light: vec2<f32>,
 };
 
 @fragment
@@ -46,6 +47,10 @@ fn fragment(in: FragmentInput) -> @location(0) vec4<f32> {
 
     // Apply baked Ambient Occlusion
     pbr_input.material.base_color = pbr_input.material.base_color * in.color;
+
+    // Apply baked lighting
+    let light_intensity: f32 = min(in.voxel_light.x + in.voxel_light.y, 7.5);
+    pbr_input.material.base_color = pbr_input.material.base_color * light_intensity;
 
     // ==== Start PBR Boilerplate ====
     pbr_input.frag_coord = in.frag_coord;

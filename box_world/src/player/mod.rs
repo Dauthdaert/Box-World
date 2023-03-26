@@ -38,6 +38,8 @@ impl Plugin for PlayerPlugin {
             });
         app.insert_resource(MouseSensitivity(1.0));
 
+        app.init_resource::<input::CurrentBlock>();
+
         app.add_plugin(DebugLinesPlugin::with_depth_test(true));
 
         app.add_startup_system(spawn_player_load_point);
@@ -49,6 +51,7 @@ impl Plugin for PlayerPlugin {
                 movement::movement_input,
                 movement::movement_collision,
                 input::interact.after(movement::movement_collision),
+                input::change_current_block,
             )
                 .in_set(OnUpdate(GameStates::InGame)),
         );

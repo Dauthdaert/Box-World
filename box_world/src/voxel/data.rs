@@ -9,11 +9,16 @@ use crate::mesher::VoxelVisibility;
 pub struct Voxel {
     visibility: VoxelVisibility,
     texture_id: u16,
+    emissiveness: u8,
 }
 
 impl Voxel {
     pub fn is_empty(&self) -> bool {
         self.visibility == VoxelVisibility::Empty
+    }
+
+    pub fn is_opaque(&self) -> bool {
+        self.visibility == VoxelVisibility::Opaque
     }
 
     pub fn indice(&self) -> u32 {
@@ -22,5 +27,9 @@ impl Voxel {
 
     pub fn visibility(&self) -> VoxelVisibility {
         self.visibility
+    }
+
+    pub fn emissiveness(&self) -> u8 {
+        self.emissiveness
     }
 }

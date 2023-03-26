@@ -6,7 +6,6 @@ use super::{
     chunk_boundary::ChunkBoundary,
     quads::Quad,
     side::{Axis, Side},
-    VoxelVisibility,
 };
 
 pub struct Face<'a> {
@@ -229,14 +228,14 @@ fn face_aos(face: &Face, chunk: &ChunkBoundary) -> [u32; 4] {
 
 fn side_aos(neighbors: [Voxel; 8]) -> [u32; 4] {
     let ns = [
-        neighbors[0].visibility() == VoxelVisibility::Opaque,
-        neighbors[1].visibility() == VoxelVisibility::Opaque,
-        neighbors[2].visibility() == VoxelVisibility::Opaque,
-        neighbors[3].visibility() == VoxelVisibility::Opaque,
-        neighbors[4].visibility() == VoxelVisibility::Opaque,
-        neighbors[5].visibility() == VoxelVisibility::Opaque,
-        neighbors[6].visibility() == VoxelVisibility::Opaque,
-        neighbors[7].visibility() == VoxelVisibility::Opaque,
+        neighbors[0].is_opaque(),
+        neighbors[1].is_opaque(),
+        neighbors[2].is_opaque(),
+        neighbors[3].is_opaque(),
+        neighbors[4].is_opaque(),
+        neighbors[5].is_opaque(),
+        neighbors[6].is_opaque(),
+        neighbors[7].is_opaque(),
     ];
 
     [

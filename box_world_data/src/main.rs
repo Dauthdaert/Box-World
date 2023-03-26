@@ -13,12 +13,14 @@ enum VoxelType {
 struct VoxelData {
     pub voxel_type: VoxelType,
     pub texture_id: u32,
+    pub emissiveness: Option<u8>,
 }
 
 #[derive(Debug, Serialize, Clone, Copy)]
 struct FinalVoxelType {
     pub visibility: VoxelType,
     pub texture_id: u16,
+    pub emissiveness: u8,
 }
 
 impl FinalVoxelType {
@@ -26,6 +28,7 @@ impl FinalVoxelType {
         Self {
             visibility: data.voxel_type,
             texture_id: data.texture_id.try_into().unwrap(),
+            emissiveness: data.emissiveness.unwrap_or(0),
         }
     }
 }

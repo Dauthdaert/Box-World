@@ -7,6 +7,7 @@ type BoundaryShape = ConstShape3usize<BOUNDARY_EDGE, BOUNDARY_EDGE, BOUNDARY_EDG
 
 pub struct ChunkBoundary {
     voxels: Box<[Voxel; BoundaryShape::USIZE]>,
+    lights: Box<[u8; BoundaryShape::USIZE]>,
 }
 
 #[allow(dead_code)]
@@ -57,11 +58,54 @@ impl ChunkBoundary {
             .try_into()
             .unwrap();
 
-        Self { voxels }
+        let lights: Box<[u8; BoundaryShape::USIZE]> = (0..BoundaryShape::SIZE)
+            .map(|idx| {
+                let (x, y, z) = ChunkBoundary::delinearize(idx);
+                match (x, y, z) {
+                    (0, 0, 0) => neighbors[0].get_light(MAX - 1, MAX - 1, MAX - 1),
+                    (0, 0, 1..=MAX) => neighbors[1].get_light(MAX - 1, MAX - 1, z - 1),
+                    (0, 0, BOUND) => neighbors[2].get_light(MAX - 1, MAX - 1, 0),
+                    (0, 1..=MAX, 0) => neighbors[3].get_light(MAX - 1, y - 1, MAX - 1),
+                    (0, 1..=MAX, 1..=MAX) => neighbors[4].get_light(MAX - 1, y - 1, z - 1),
+                    (0, 1..=MAX, BOUND) => neighbors[5].get_light(MAX - 1, y - 1, 0),
+                    (0, BOUND, 0) => neighbors[6].get_light(MAX - 1, 0, MAX - 1),
+                    (0, BOUND, 1..=MAX) => neighbors[7].get_light(MAX - 1, 0, z - 1),
+                    (0, BOUND, BOUND) => neighbors[8].get_light(MAX - 1, 0, 0),
+                    (1..=MAX, 0, 0) => neighbors[9].get_light(x - 1, MAX - 1, MAX - 1),
+                    (1..=MAX, 0, 1..=MAX) => neighbors[10].get_light(x - 1, MAX - 1, z - 1),
+                    (1..=MAX, 0, BOUND) => neighbors[11].get_light(x - 1, MAX - 1, 0),
+                    (1..=MAX, 1..=MAX, 0) => neighbors[12].get_light(x - 1, y - 1, MAX - 1),
+                    (1..=MAX, 1..=MAX, 1..=MAX) => center.get_light(x - 1, y - 1, z - 1),
+                    (1..=MAX, 1..=MAX, BOUND) => neighbors[13].get_light(x - 1, y - 1, 0),
+                    (1..=MAX, BOUND, 0) => neighbors[14].get_light(x - 1, 0, MAX - 1),
+                    (1..=MAX, BOUND, 1..=MAX) => neighbors[15].get_light(x - 1, 0, z - 1),
+                    (1..=MAX, BOUND, BOUND) => neighbors[16].get_light(x - 1, 0, 0),
+                    (BOUND, 0, 0) => neighbors[17].get_light(0, MAX - 1, MAX - 1),
+                    (BOUND, 0, 1..=MAX) => neighbors[18].get_light(0, MAX - 1, z - 1),
+                    (BOUND, 0, BOUND) => neighbors[19].get_light(0, MAX - 1, 0),
+                    (BOUND, 1..=MAX, 0) => neighbors[20].get_light(0, y - 1, MAX - 1),
+                    (BOUND, 1..=MAX, 1..=MAX) => neighbors[21].get_light(0, y - 1, z - 1),
+                    (BOUND, 1..=MAX, BOUND) => neighbors[22].get_light(0, y - 1, 0),
+                    (BOUND, BOUND, 0) => neighbors[23].get_light(0, 0, MAX - 1),
+                    (BOUND, BOUND, 1..=MAX) => neighbors[24].get_light(0, 0, z - 1),
+                    (BOUND, BOUND, BOUND) => neighbors[25].get_light(0, 0, 0),
+
+                    (_, _, _) => 0,
+                }
+            })
+            .collect::<Vec<_>>()
+            .try_into()
+            .unwrap();
+
+        Self { voxels, lights }
     }
 
     pub fn voxels(&self) -> &[Voxel; BoundaryShape::USIZE] {
         &self.voxels
+    }
+
+    pub fn lights(&self) -> &[u8; BoundaryShape::USIZE] {
+        &self.lights
     }
 
     pub const fn edge() -> u32 {

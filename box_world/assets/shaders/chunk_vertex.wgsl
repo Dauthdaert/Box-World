@@ -16,14 +16,16 @@ struct Vertex {
     @location(5) joint_indices: vec4<u32>,
     @location(6) joint_weights: vec4<f32>,
 #endif
-    @location(7) voxel_indice: u32
+    @location(7) voxel_indice: u32,
+    @location(8) voxel_light: vec2<f32>
 };
 
 struct VertexOutput {
     @builtin(position) clip_position: vec4<f32>,
     #import bevy_pbr::mesh_vertex_output
 
-    @location(5) voxel_indice: u32
+    @location(5) voxel_indice: u32,
+    @location(6) voxel_light: vec2<f32>,
 };
 
 @vertex
@@ -52,6 +54,7 @@ fn vertex(vertex: Vertex) -> VertexOutput {
 
     out.color = vertex.color;
     out.voxel_indice = vertex.voxel_indice;
+    out.voxel_light = vertex.voxel_light;
 
     return out;
 }

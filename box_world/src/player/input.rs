@@ -5,25 +5,44 @@ use bevy::{
 use bevy_prototype_debug_lines::DebugShapes;
 
 use crate::{
-    chunk::{ChunkData, LoadedChunks},
+    chunk::{ChunkData, LoadedChunks, VoxelAddedEvent, VoxelRemovedEvent},
     mesher::NeedsMesh,
     voxel::{GlobalVoxelPos, Voxel, VoxelRegistry},
 };
 
 use super::Player;
 
+#[derive(Debug, Clone, Resource, Default)]
+pub struct CurrentBlock(Option<Voxel>);
+
+pub(super) fn change_current_block(
+    mut current_block: ResMut<CurrentBlock>,
+    keyboard_input: Res<Input<KeyCode>>,
+    voxel_registry: Res<VoxelRegistry>,
+) {
+    if keyboard_input.just_pressed(KeyCode::Key1) {
+        current_block.0 = None;
+    } else if keyboard_input.just_pressed(KeyCode::Key2) {
+        current_block.0 = Some(voxel_registry.get_voxel("stone"));
+    } else if keyboard_input.just_pressed(KeyCode::Key3) {
+        current_block.0 = Some(voxel_registry.get_voxel("torch"));
+    }
+}
+
 #[allow(clippy::too_many_arguments)]
 #[allow(clippy::type_complexity)]
 pub(super) fn interact(
     mut commands: Commands,
-    voxel_registry: Res<VoxelRegistry>,
     loaded_chunks: Res<LoadedChunks>,
     mouse_input: Res<Input<MouseButton>>,
+    current_block: Res<CurrentBlock>,
     window: Query<&Window, With<PrimaryWindow>>,
     player_position: Query<&Transform, With<Player>>,
     camera: Query<(&Camera, &GlobalTransform)>,
     mut highlight: ResMut<DebugShapes>,
     mut chunks: Query<&mut ChunkData>,
+    mut added_events: EventWriter<VoxelAddedEvent>,
+    mut removed_events: EventWriter<VoxelRemovedEvent>,
 ) {
     let window = window.single();
 
@@ -31,8 +50,6 @@ pub(super) fn interact(
     if window.cursor.grab_mode != CursorGrabMode::Locked {
         return;
     }
-
-    let player_equipped_block = voxel_registry.get_voxel("stone");
 
     let player_translation = player_position.single().translation;
     let player_head_pos = GlobalVoxelPos::from_global_coords(player_translation);
@@ -67,8 +84,14 @@ pub(super) fn interact(
                 // Interact with selected block
                 let changed = if mouse_input.just_pressed(MouseButton::Left) {
                     chunk_data.set(local_pos.x, local_pos.y, local_pos.z, Voxel::default());
+                    removed_events.send(VoxelRemovedEvent::new(GlobalVoxelPos::from_chunk_local(
+                        chunk_pos, local_pos,
+                    )));
                     true
                 } else if mouse_input.just_pressed(MouseButton::Right) {
+                    // Stop if player has no block in hand
+                    let Some(player_equipped_block) = current_block.0 else { return; };
+
                     // Place in previous spot
                     let mut prev_voxel_pos = voxel_pos;
 
@@ -106,6 +129,11 @@ pub(super) fn interact(
                     // Propagate change of voxel position
                     chunk_pos = prev_chunk_pos;
                     local_pos = prev_local_pos;
+
+                    added_events.send(VoxelAddedEvent::new(
+                        GlobalVoxelPos::from_chunk_local(chunk_pos, local_pos),
+                        player_equipped_block,
+                    ));
 
                     true
                 } else {

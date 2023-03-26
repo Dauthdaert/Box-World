@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::voxel::Voxel;
 
-use super::storage::Storage;
+use super::{lighting::LightStorage, storage::Storage};
 
 const CHUNK_EDGE: usize = 16;
 type ChunkShape = ConstShape3usize<CHUNK_EDGE, CHUNK_EDGE, CHUNK_EDGE>;
@@ -12,11 +12,13 @@ type ChunkShape = ConstShape3usize<CHUNK_EDGE, CHUNK_EDGE, CHUNK_EDGE>;
 #[derive(Serialize, Deserialize)]
 pub struct RawChunk {
     voxels: Storage,
+    lights: LightStorage,
 }
 
 #[derive(Component, Clone, Debug)]
 pub struct ChunkData {
     voxels: Storage,
+    lights: LightStorage,
     change_count: u16,
     dirty: bool,
 }
@@ -25,6 +27,7 @@ impl Default for ChunkData {
     fn default() -> Self {
         Self {
             voxels: Storage::new(ChunkShape::USIZE),
+            lights: LightStorage::new(),
             change_count: 0,
             dirty: true,
         }
@@ -46,6 +49,31 @@ impl ChunkData {
             self.voxels.trim();
             self.change_count = 0;
         }
+    }
+
+    /// Output contains both lights
+    pub fn get_light(&self, x: u32, y: u32, z: u32) -> u8 {
+        self.lights.get_light(Self::linearize(x, y, z))
+    }
+
+    /// Output is bounded between 0 and 15
+    pub fn get_torchlight(&self, x: u32, y: u32, z: u32) -> u8 {
+        self.lights.get_torchlight(Self::linearize(x, y, z))
+    }
+
+    /// Input is bounded between 0 and 15
+    pub fn set_torchlight(&mut self, x: u32, y: u32, z: u32, value: u8) {
+        self.lights.set_torchlight(Self::linearize(x, y, z), value);
+    }
+
+    /// Output is bounded between 0 and 15
+    pub fn get_sunlight(&self, x: u32, y: u32, z: u32) -> u8 {
+        self.lights.get_sunlight(Self::linearize(x, y, z))
+    }
+
+    /// Input is bounded between 0 and 15
+    pub fn set_sunlight(&mut self, x: u32, y: u32, z: u32, value: u8) {
+        self.lights.set_sunlight(Self::linearize(x, y, z), value);
     }
 
     pub fn is_uniform(&self) -> bool {
@@ -75,6 +103,10 @@ impl ChunkData {
         ChunkShape::USIZE as u32
     }
 
+    pub const fn usize() -> usize {
+        ChunkShape::USIZE
+    }
+
     pub const fn edge() -> u32 {
         CHUNK_EDGE as u32
     }
@@ -93,6 +125,7 @@ impl ChunkData {
     pub fn from_raw(raw_chunk: RawChunk) -> Self {
         Self {
             voxels: raw_chunk.voxels,
+            lights: raw_chunk.lights,
             change_count: 0,
             dirty: false,
         }
@@ -101,6 +134,7 @@ impl ChunkData {
     pub fn to_raw(&self) -> RawChunk {
         RawChunk {
             voxels: self.voxels.clone(),
+            lights: self.lights.clone(),
         }
     }
 }

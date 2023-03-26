@@ -49,23 +49,6 @@ pub fn setup_daylight_cycle(mut commands: Commands) {
 
     commands.insert_resource(AtmosphereModel::new(atmosphere_model));
     commands.insert_resource(CycleTimer::new(t));
-
-    commands.spawn((
-        DirectionalLightBundle {
-            directional_light: DirectionalLight {
-                // TODO: Enable this when we have more frame budget
-                //shadows_enabled: true,
-                ..default()
-            },
-            ..default()
-        },
-        Sun,
-    ));
-
-    commands.insert_resource(AmbientLight {
-        color: Color::WHITE,
-        brightness: 0.2,
-    });
 }
 
 pub fn toggle_daylight_cycle(mut cycle: ResMut<CycleTimer>) {
@@ -74,7 +57,6 @@ pub fn toggle_daylight_cycle(mut cycle: ResMut<CycleTimer>) {
 
 pub fn daylight_cycle(
     mut atmosphere: AtmosphereMut<Nishita>,
-    mut query: Query<(&mut Transform, &mut DirectionalLight), With<Sun>>,
     mut cycle: ResMut<CycleTimer>,
     time: Res<Time>,
 ) {
@@ -83,9 +65,5 @@ pub fn daylight_cycle(
     if cycle.timer.finished() {
         let t = cycle.current_time;
         atmosphere.sun_position = Vec3::new(0., t.sin(), t.cos());
-
-        let (mut light_transformation, mut directional) = query.single_mut();
-        light_transformation.rotation = Quat::from_rotation_x(-t.sin().atan2(t.cos()));
-        directional.illuminance = t.sin().max(0.0).powf(2.0) * 100000.0;
     }
 }
