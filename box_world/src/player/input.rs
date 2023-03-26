@@ -93,6 +93,7 @@ pub(super) fn interact(
                     let Some(player_equipped_block) = current_block.0 else { return; };
 
                     // Place in previous spot
+                    // FIXME: Place on selected face, not just previous ray voxel
                     let mut prev_voxel_pos = voxel_pos;
 
                     // Rewind ray backwards by one voxel
