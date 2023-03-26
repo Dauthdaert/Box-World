@@ -9,7 +9,7 @@ use zstd::stream::copy_decode;
 
 use crate::{
     chunk::{ChunkData, ChunkPos, Database, LoadedChunks},
-    mesher::NeedsMesh,
+    lighting::NeedsLightPass,
     voxel::{ChunkLocalVoxelPos, GlobalVoxelPos, VoxelRegistry},
 };
 
@@ -144,6 +144,6 @@ fn handle_done_generation_tasks(
 
     // Re-mesh all neighbors after loading new chunks to simplify geometry
     for neighbor in world.get_unique_loaded_chunks_and_neighbors(&loaded) {
-        commands.entity(neighbor).insert(NeedsMesh);
+        commands.entity(neighbor).insert(NeedsLightPass);
     }
 }

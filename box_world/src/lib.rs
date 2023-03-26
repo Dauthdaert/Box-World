@@ -12,6 +12,7 @@ use bevy::{
 use bevy_asset_loader::prelude::*;
 use bevy_inspector_egui::quick::WorldInspectorPlugin;
 use chunk::{ChunkData, ChunkPos, LoadPoint, LoadedChunks};
+use lighting::NeedsLightPass;
 use mesher::NeedsMesh;
 use player::Player;
 use states::GameStates;
@@ -116,11 +117,12 @@ impl LoadingTimer {
     }
 }
 
+#[allow(clippy::type_complexity)]
 fn transition_after_load(
     mut next_state: ResMut<NextState<GameStates>>,
     loaded_chunks: Res<LoadedChunks>,
     player: Query<&Transform, With<Player>>,
-    chunks: Query<(), (With<ChunkData>, Without<NeedsMesh>)>,
+    chunks: Query<(), (With<ChunkData>, Without<NeedsLightPass>, Without<NeedsMesh>)>,
     time: Res<Time>,
     mut loading_timer: ResMut<LoadingTimer>,
 ) {
