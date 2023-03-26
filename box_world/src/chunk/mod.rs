@@ -1,5 +1,4 @@
 use crate::{
-    states::GameStates,
     voxel::{GlobalVoxelPos, Voxel},
     world_generator::NeedsChunkData,
 };
@@ -21,8 +20,8 @@ pub use loaded::{Database, LoadPoint, LoadedChunks};
 pub use position::ChunkPos;
 
 pub struct VoxelAddedEvent {
-    pos: GlobalVoxelPos,
-    value: Voxel,
+    pub pos: GlobalVoxelPos,
+    pub value: Voxel,
 }
 
 impl VoxelAddedEvent {
@@ -32,7 +31,7 @@ impl VoxelAddedEvent {
 }
 
 pub struct VoxelRemovedEvent {
-    pos: GlobalVoxelPos,
+    pub pos: GlobalVoxelPos,
 }
 
 impl VoxelRemovedEvent {
@@ -61,7 +60,6 @@ impl Plugin for ChunkPlugin {
 
         app.add_event::<VoxelAddedEvent>()
             .add_event::<VoxelRemovedEvent>();
-        app.add_system(lighting::propagate_lighting.run_if(in_state(GameStates::InGame)));
     }
 }
 

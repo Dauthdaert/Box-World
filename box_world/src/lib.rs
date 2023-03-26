@@ -18,6 +18,7 @@ use states::GameStates;
 
 mod chunk;
 mod environment;
+mod lighting;
 mod mesher;
 mod player;
 mod states;
