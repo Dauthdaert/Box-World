@@ -85,6 +85,7 @@ pub fn app() -> App {
     app.add_plugin(world_generator::GeneratorPlugin);
     app.add_plugin(mesher::MesherPlugin);
     app.add_plugin(player::PlayerPlugin);
+    app.add_plugin(lighting::LightingPlugin);
     app.add_plugin(environment::EnvironmentPlugin);
 
     app

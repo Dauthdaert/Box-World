@@ -64,6 +64,7 @@ impl ChunkData {
     /// Input is bounded between 0 and 15
     pub fn set_torchlight(&mut self, x: u32, y: u32, z: u32, value: u8) {
         self.lights.set_torchlight(Self::linearize(x, y, z), value);
+        self.set_dirty(true);
     }
 
     /// Output is bounded between 0 and 15
@@ -74,6 +75,7 @@ impl ChunkData {
     /// Input is bounded between 0 and 15
     pub fn set_sunlight(&mut self, x: u32, y: u32, z: u32, value: u8) {
         self.lights.set_sunlight(Self::linearize(x, y, z), value);
+        self.set_dirty(true);
     }
 
     pub fn is_uniform(&self) -> bool {

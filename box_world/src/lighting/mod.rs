@@ -38,65 +38,100 @@ struct LightRemNode {
 #[allow(clippy::type_complexity)]
 pub fn initial_light_pass(
     mut commands: Commands,
-    mut chunks: ParamSet<(
-        Query<(Entity, &ChunkPos, &mut ChunkData), With<NeedsLightPass>>,
-        Query<(&ChunkPos, &mut ChunkData)>,
-    )>,
-    lighted_chunks: Query<&mut ChunkData, Without<NeedsLightPass>>,
+    needs_light: Query<Entity, With<NeedsLightPass>>,
+    has_light: Query<Entity, Without<NeedsLightPass>>,
+    mut chunks: Query<(&ChunkPos, &mut ChunkData)>,
     loaded_chunks: Res<LoadedChunks>,
 ) {
     // FIXME: Handle sideways propagation into unloaded chunks
     let mut sunlight_queue = VecDeque::new();
-    for (chunk_entity, chunk_pos, mut chunk_data) in chunks.p0().iter_mut() {
+    let mut work_count = 0;
+    for chunk_entity in needs_light.iter() {
+        // Only do 10 columns at a time
+        if work_count > 10 {
+            break;
+        }
+
+        let Ok((chunk_pos, _chunk_data)) = chunks.get(chunk_entity) else { continue; };
         let top_pos = ChunkPos::new(chunk_pos.x, chunk_pos.y + 1, chunk_pos.z);
         if let Some(top_chunk_entity) = loaded_chunks.get_chunk(top_pos) {
-            if let Ok(top_chunk_data) = lighted_chunks.get(*top_chunk_entity) {
+            if has_light.contains(*top_chunk_entity) {
+                let Ok((_top_chunk_pos, top_chunk_data)) = chunks.get(*top_chunk_entity) else { continue; };
+                let y = 0;
+                for z in 0..ChunkData::edge() {
+                    for x in 0..ChunkData::edge() {
+                        let idx = ChunkData::linearize(x, y, z);
+                        if top_chunk_data.get_sunlight(x, y, z) > 0 {
+                            sunlight_queue.push_back(LightAddNode {
+                                idx,
+                                chunk: *top_chunk_entity,
+                            });
+                        }
+                    }
+                }
+
+                work_count += 1;
+                commands
+                    .entity(chunk_entity)
+                    .remove::<NeedsLightPass>()
+                    .insert(NeedsMesh);
+
+                // Mark the whole column as done
+                let mut chunk_pos = ChunkPos::new(chunk_pos.x, chunk_pos.y - 1, chunk_pos.z);
+                loop {
+                    chunk_pos = ChunkPos::new(chunk_pos.x, chunk_pos.y - 1, chunk_pos.z);
+                    let Some(chunk_entity) = loaded_chunks.get_chunk(chunk_pos) else { break; };
+                    commands
+                        .entity(*chunk_entity)
+                        .remove::<NeedsLightPass>()
+                        .insert(NeedsMesh);
+                }
+            }
+        } else {
+            // Decide if top chunk is in sunlight
+            // FIXME: For now, if current chunk is empty we assume sky
+            let (chunk_pos, mut chunk_data) = chunks.get_mut(chunk_entity).unwrap();
+            if chunk_data.is_empty() {
                 for z in 0..ChunkData::edge() {
                     for y in 0..ChunkData::edge() {
                         for x in 0..ChunkData::edge() {
                             let idx = ChunkData::linearize(x, y, z);
-                            if top_chunk_data.get_sunlight(x, y, z) > 0 {
+                            chunk_data.set_sunlight(x, y, z, 15);
+                            if y == 0 {
                                 sunlight_queue.push_back(LightAddNode {
                                     idx,
-                                    chunk: *top_chunk_entity,
+                                    chunk: chunk_entity,
                                 });
                             }
                         }
                     }
                 }
-
-                commands.entity(chunk_entity).remove::<NeedsLightPass>();
-            }
-        } else {
-            // Decide if top chunk is in sunlight
-            // FIXME: For now, if current chunk is empty we assume sky
-            if true {
-                let y = ChunkData::edge() - 1;
-                for z in 0..ChunkData::edge() {
-                    for x in 0..ChunkData::edge() {
-                        let idx = ChunkData::linearize(x, y, z);
-                        if !chunk_data.get(x, y, z).is_opaque() {
-                            chunk_data.set_sunlight(x, y, z, 15);
-                            sunlight_queue.push_back(LightAddNode {
-                                idx,
-                                chunk: chunk_entity,
-                            });
-                        }
-                    }
-                }
             }
 
-            commands.entity(chunk_entity).remove::<NeedsLightPass>();
+            work_count += 1;
+            commands
+                .entity(chunk_entity)
+                .remove::<NeedsLightPass>()
+                .insert(NeedsMesh);
+
+            // Mark the whole column as done
+            let mut chunk_pos = ChunkPos::new(chunk_pos.x, chunk_pos.y - 1, chunk_pos.z);
+            loop {
+                chunk_pos = ChunkPos::new(chunk_pos.x, chunk_pos.y - 1, chunk_pos.z);
+                let Some(chunk_entity) = loaded_chunks.get_chunk(chunk_pos) else { break; };
+                commands
+                    .entity(*chunk_entity)
+                    .remove::<NeedsLightPass>()
+                    .insert(NeedsMesh);
+            }
         }
-
-        commands.entity(chunk_entity).insert(NeedsMesh);
     }
 
     let mut changed = HashSet::new();
     sun_added::handle_added(
         &mut sunlight_queue,
         &mut changed,
-        &mut chunks.p1(),
+        &mut chunks,
         &loaded_chunks,
     );
 

@@ -18,7 +18,7 @@ pub(super) fn handle_added(
         let (x, y, z) = ChunkData::delinearize(node.idx);
         let (pos, source_level) = {
             let Ok((pos, chunk_data)) = chunks.get(node.chunk) else { continue; };
-            (*pos, chunk_data.get_torchlight(x, y, z))
+            (*pos, chunk_data.get_sunlight(x, y, z))
         };
         let new_level = source_level.saturating_sub(1);
         let down_level = if source_level == 15 { 15 } else { new_level };
@@ -262,10 +262,9 @@ fn check_neighbor_simple_add(
     source_level: u8,
     new_level: u8,
 ) {
-    if !chunk_data.get(x, y, z).is_opaque()
-        && chunk_data.get_torchlight(x, y, z) + 2 <= source_level
+    if !chunk_data.get(x, y, z).is_opaque() && chunk_data.get_sunlight(x, y, z) + 2 <= source_level
     {
-        chunk_data.set_torchlight(x, y, z, new_level);
+        chunk_data.set_sunlight(x, y, z, new_level);
         add_queue.push_back(LightAddNode {
             idx: ChunkData::linearize(x, y, z),
             chunk: chunk_entity,
