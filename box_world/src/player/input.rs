@@ -25,6 +25,8 @@ pub(super) fn change_current_block(
     } else if keyboard_input.just_pressed(KeyCode::Key2) {
         current_block.0 = Some(voxel_registry.get_voxel("stone"));
     } else if keyboard_input.just_pressed(KeyCode::Key3) {
+        current_block.0 = Some(voxel_registry.get_voxel("glass"));
+    } else if keyboard_input.just_pressed(KeyCode::Key4) {
         current_block.0 = Some(voxel_registry.get_voxel("torch"));
     }
 }
