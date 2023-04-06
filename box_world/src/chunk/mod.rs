@@ -125,10 +125,12 @@ fn load_around_load_points(
             let _span = info_span!("Loading chunks").entered();
             let loaded_chunks = world.load_inside_range(&load_pos);
             for pos in loaded_chunks.into_iter() {
-                let entity = commands
-                    .spawn((pos, NeedsChunkData, Name::new("Chunk")))
-                    .id();
-                world.set(pos, entity);
+                if world.get_chunk(pos).is_none() {
+                    let entity = commands
+                        .spawn((pos, NeedsChunkData, Name::new("Chunk")))
+                        .id();
+                    world.set(pos, entity);
+                }
             }
         }
     }
