@@ -51,7 +51,7 @@ bevy-inspector-egui = "0.18"
 bevy_rapier3d = { version = "0.21.0", default-features = false }
 bevy_atmosphere = "0.6"
 bevy_common_assets = "0.6.0"
-bevy_asset_loader = "0.15.0"
+bevy_asset_loader = "0.16.0"
 bevy_prototype_debug_lines = "0.10.1"
 futures-lite = "*"
 bitvec = "1.0.1"

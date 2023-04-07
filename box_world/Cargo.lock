@@ -418,9 +418,9 @@ dependencies = [
 
 [[package]]
 name = "bevy_asset_loader"
-version = "0.15.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "118490c65031cecd6586e6b2cbd16f05bc161438dd0d30c42e307638eab7daba"
+checksum = "f32463c4be049c9535661f2debcd76a6ee7fc5c0e0c2335214bda671607ae7d9"
 dependencies = [
  "anyhow",
  "bevy",
@@ -429,9 +429,9 @@ dependencies = [
 
 [[package]]
 name = "bevy_asset_loader_derive"
-version = "0.15.0"
+version = "0.16.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "ac452d5861a4f9e69625b9a6d63a846dc9ee0e3c5ee32fe2d9c5b8cd59b916ba"
+checksum = "2921646f30d11ae14b85e4957242dcb98c37b748987b00b84473fcd390c561dd"
 dependencies = [
  "proc-macro2",
  "quote",
