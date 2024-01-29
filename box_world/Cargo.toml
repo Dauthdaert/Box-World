@@ -58,7 +58,7 @@ bitvec = "1.0.1"
 noise = { git = "https://github.com/Razaekel/noise-rs.git" }
 rand = "0.8.5"
 ndshape = "0.3.0"
-itertools = "0.10.5"
+itertools = "0.12.1"
 rusqlite = "0.29.0"
 r2d2 = "0.8.10"
 r2d2_sqlite = "0.22.0"
