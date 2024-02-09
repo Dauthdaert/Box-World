@@ -19,6 +19,7 @@ pub use lighting::{to_sunlight, to_torchlight};
 pub use loaded::{Database, LoadPoint, LoadedChunks};
 pub use position::ChunkPos;
 
+#[derive(Event)]
 pub struct VoxelAddedEvent {
     pub pos: GlobalVoxelPos,
     pub value: Voxel,
@@ -30,6 +31,7 @@ impl VoxelAddedEvent {
     }
 }
 
+#[derive(Event)]
 pub struct VoxelRemovedEvent {
     pub pos: GlobalVoxelPos,
 }
@@ -48,15 +50,10 @@ impl Plugin for ChunkPlugin {
             .insert_resource(Database::new())
             .insert_resource(AutosaveTimer::new());
 
-        app.add_system(periodic_chunk_trim)
-            .add_system(autosave_chunks)
-            .add_system(load_around_load_points.in_base_set(CoreSet::PreUpdate));
+        app.add_systems(Update, (periodic_chunk_trim, autosave_chunks))
+            .add_systems(PreUpdate, load_around_load_points);
 
-        app.add_system(
-            save_chunks_on_close
-                .run_if(on_event::<AppExit>())
-                .in_base_set(CoreSet::Last),
-        );
+        app.add_systems(Last, save_chunks_on_close.run_if(on_event::<AppExit>()));
 
         app.add_event::<VoxelAddedEvent>()
             .add_event::<VoxelRemovedEvent>();

@@ -9,7 +9,6 @@ pub struct PreSpawnPlayerBundle {
     pub player: Player,
     pub name: Name,
     pub load_point: LoadPoint,
-    #[bundle]
     pub spatial: SpatialBundle,
 }
 
@@ -32,7 +31,6 @@ impl PreSpawnPlayerBundle {
 
 #[derive(Bundle, Default)]
 pub struct PostSpawnPlayerBundle {
-    #[bundle]
     pub collider: ColliderBundle,
 }
 

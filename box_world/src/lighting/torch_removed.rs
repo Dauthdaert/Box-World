@@ -18,7 +18,9 @@ pub(super) fn handle_removed(
 
         let (x, y, z) = ChunkData::delinearize(node.idx);
         let pos = {
-            let Ok((pos, _chunk_data)) = chunks.get(node.chunk) else { continue; };
+            let Ok((pos, _chunk_data)) = chunks.get(node.chunk) else {
+                continue;
+            };
             *pos
         };
         let source_level = node.val;
@@ -28,7 +30,9 @@ pub(super) fn handle_removed(
         const MAX: u32 = ChunkData::edge() - 1;
 
         if x > 0 && x < MAX {
-            let Ok((_pos, mut chunk_data)) = chunks.get_mut(node.chunk) else { continue; };
+            let Ok((_pos, mut chunk_data)) = chunks.get_mut(node.chunk) else {
+                continue;
+            };
 
             check_neighbor_simple_rem(
                 add_queue,
@@ -64,7 +68,9 @@ pub(super) fn handle_removed(
                 source_level,
             );
 
-            let Ok((_pos, mut chunk_data)) = chunks.get_mut(node.chunk) else { continue; };
+            let Ok((_pos, mut chunk_data)) = chunks.get_mut(node.chunk) else {
+                continue;
+            };
             check_neighbor_simple_rem(
                 add_queue,
                 rem_queue,
@@ -88,7 +94,9 @@ pub(super) fn handle_removed(
                 source_level,
             );
 
-            let Ok((_pos, mut chunk_data)) = chunks.get_mut(node.chunk) else { continue; };
+            let Ok((_pos, mut chunk_data)) = chunks.get_mut(node.chunk) else {
+                continue;
+            };
             check_neighbor_simple_rem(
                 add_queue,
                 rem_queue,
@@ -102,7 +110,9 @@ pub(super) fn handle_removed(
         }
 
         if y > 0 && y < MAX {
-            let Ok((_pos, mut chunk_data)) = chunks.get_mut(node.chunk) else { continue; };
+            let Ok((_pos, mut chunk_data)) = chunks.get_mut(node.chunk) else {
+                continue;
+            };
 
             check_neighbor_simple_rem(
                 add_queue,
@@ -138,7 +148,9 @@ pub(super) fn handle_removed(
                 source_level,
             );
 
-            let Ok((_pos, mut chunk_data)) = chunks.get_mut(node.chunk) else { continue; };
+            let Ok((_pos, mut chunk_data)) = chunks.get_mut(node.chunk) else {
+                continue;
+            };
             check_neighbor_simple_rem(
                 add_queue,
                 rem_queue,
@@ -162,7 +174,9 @@ pub(super) fn handle_removed(
                 source_level,
             );
 
-            let Ok((_pos, mut chunk_data)) = chunks.get_mut(node.chunk) else { continue; };
+            let Ok((_pos, mut chunk_data)) = chunks.get_mut(node.chunk) else {
+                continue;
+            };
             check_neighbor_simple_rem(
                 add_queue,
                 rem_queue,
@@ -176,7 +190,9 @@ pub(super) fn handle_removed(
         }
 
         if z > 0 && z < MAX {
-            let Ok((_pos, mut chunk_data)) = chunks.get_mut(node.chunk) else { continue; };
+            let Ok((_pos, mut chunk_data)) = chunks.get_mut(node.chunk) else {
+                continue;
+            };
 
             check_neighbor_simple_rem(
                 add_queue,
@@ -212,7 +228,9 @@ pub(super) fn handle_removed(
                 source_level,
             );
 
-            let Ok((_pos, mut chunk_data)) = chunks.get_mut(node.chunk) else { continue; };
+            let Ok((_pos, mut chunk_data)) = chunks.get_mut(node.chunk) else {
+                continue;
+            };
             check_neighbor_simple_rem(
                 add_queue,
                 rem_queue,
@@ -236,7 +254,9 @@ pub(super) fn handle_removed(
                 source_level,
             );
 
-            let Ok((_pos, mut chunk_data)) = chunks.get_mut(node.chunk) else { continue; };
+            let Ok((_pos, mut chunk_data)) = chunks.get_mut(node.chunk) else {
+                continue;
+            };
             check_neighbor_simple_rem(
                 add_queue,
                 rem_queue,
@@ -291,8 +311,12 @@ fn check_neighbor_complex_rem(
     source_level: u8,
 ) {
     let (chunk_entity, mut chunk_data) = {
-        let Some(chunk_entity) = loaded_chunks.get_chunk(pos) else { return; };
-        let Ok((_pos, chunk_data)) = chunks.get_mut(*chunk_entity) else { return; };
+        let Some(chunk_entity) = loaded_chunks.get_chunk(pos) else {
+            return;
+        };
+        let Ok((_pos, chunk_data)) = chunks.get_mut(*chunk_entity) else {
+            return;
+        };
         (chunk_entity, chunk_data)
     };
 

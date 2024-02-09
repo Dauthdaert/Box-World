@@ -10,7 +10,6 @@ use bevy::{
     window::{CursorGrabMode, PrimaryWindow},
 };
 use bevy_atmosphere::prelude::AtmosphereCamera;
-use bevy_prototype_debug_lines::DebugLinesPlugin;
 use bevy_rapier3d::prelude::{
     Collider, CollisionGroups, Group, NoUserData, RapierConfiguration, RapierPhysicsPlugin,
     SolverGroups,
@@ -31,7 +30,7 @@ pub struct PlayerPlugin;
 /// Based on the version used in Vinox : https://github.com/Vixeliz/Vinox
 impl Plugin for PlayerPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugin(RapierPhysicsPlugin::<NoUserData>::default())
+        app.add_plugins(RapierPhysicsPlugin::<NoUserData>::default())
             .insert_resource(RapierConfiguration {
                 gravity: Vec3::new(0.0, -GRAVITY, 0.0),
                 ..default()
@@ -40,20 +39,19 @@ impl Plugin for PlayerPlugin {
 
         app.init_resource::<input::CurrentBlock>();
 
-        app.add_plugin(DebugLinesPlugin::with_depth_test(true));
+        app.add_systems(Startup, spawn_player_load_point);
 
-        app.add_startup_system(spawn_player_load_point);
-
-        app.add_system(spawn_player_cam_and_collider.in_schedule(OnEnter(GameStates::InGame)));
+        app.add_systems(OnEnter(GameStates::InGame), spawn_player_cam_and_collider);
 
         app.add_systems(
+            Update,
             (
                 movement::movement_input,
                 movement::movement_collision,
                 input::interact.after(movement::movement_collision),
                 input::change_current_block,
             )
-                .in_set(OnUpdate(GameStates::InGame)),
+                .run_if(in_state(GameStates::InGame)),
         );
     }
 }

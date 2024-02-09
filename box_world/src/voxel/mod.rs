@@ -17,7 +17,7 @@ pub struct VoxelPlugin;
 
 impl Plugin for VoxelPlugin {
     fn build(&self, app: &mut App) {
-        app.add_plugin(RonAssetPlugin::<Voxel>::new(&["voxel.ron"]));
+        app.add_plugins(RonAssetPlugin::<Voxel>::new(&["voxel.ron"]));
 
         app.add_collection_to_loading_state::<_, registry::VoxelDataAssets>(
             GameStates::AssetLoading,

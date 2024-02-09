@@ -15,7 +15,10 @@ pub struct LightingPlugin;
 
 impl Plugin for LightingPlugin {
     fn build(&self, app: &mut App) {
-        app.add_system(propagate_lighting.run_if(in_state(GameStates::InGame)));
+        app.add_systems(
+            Update,
+            propagate_lighting.run_if(in_state(GameStates::InGame)),
+        );
     }
 }
 
@@ -46,8 +49,12 @@ pub fn propagate_lighting(
 
     for event in voxel_rem_event.iter() {
         let (chunk_pos, local_pos) = event.pos.to_chunk_local();
-        let Some(chunk_entity) = loaded_chunks.get_chunk(chunk_pos) else { continue; };
-        let Ok((_pos, mut chunk_data)) = chunks.get_mut(*chunk_entity) else { continue; };
+        let Some(chunk_entity) = loaded_chunks.get_chunk(chunk_pos) else {
+            continue;
+        };
+        let Ok((_pos, mut chunk_data)) = chunks.get_mut(*chunk_entity) else {
+            continue;
+        };
 
         let source_level = chunk_data.get_torchlight(local_pos.x, local_pos.y, local_pos.z);
         chunk_data.set_torchlight(local_pos.x, local_pos.y, local_pos.z, 0);
@@ -61,8 +68,12 @@ pub fn propagate_lighting(
 
     for event in voxel_add_event.iter() {
         let (chunk_pos, local_pos) = event.pos.to_chunk_local();
-        let Some(chunk_entity) = loaded_chunks.get_chunk(chunk_pos) else { continue; };
-        let Ok((_pos, mut chunk_data)) = chunks.get_mut(*chunk_entity) else { continue; };
+        let Some(chunk_entity) = loaded_chunks.get_chunk(chunk_pos) else {
+            continue;
+        };
+        let Ok((_pos, mut chunk_data)) = chunks.get_mut(*chunk_entity) else {
+            continue;
+        };
 
         if event.value.is_opaque() {
             let source_level = chunk_data.get_torchlight(local_pos.x, local_pos.y, local_pos.z);

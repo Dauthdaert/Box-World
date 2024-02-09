@@ -36,7 +36,9 @@ impl FinalVoxelType {
 fn main() {
     let mut blocks = HashMap::new();
     for path in fs::read_dir("./assets/data/blocks/").unwrap() {
-        let Ok(path) = path else { panic!(); };
+        let Ok(path) = path else {
+            panic!();
+        };
 
         let file_name = path.file_name().into_string().unwrap();
         let voxel_name = file_name.split_once('.').unwrap().0.to_string();

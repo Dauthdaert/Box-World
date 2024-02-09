@@ -2,7 +2,6 @@ use bevy::{
     prelude::*,
     window::{CursorGrabMode, PrimaryWindow},
 };
-use bevy_prototype_debug_lines::DebugShapes;
 
 use crate::{
     chunk::{ChunkData, LoadedChunks, VoxelAddedEvent, VoxelRemovedEvent},
@@ -41,7 +40,7 @@ pub(super) fn interact(
     window: Query<&Window, With<PrimaryWindow>>,
     player_position: Query<&Transform, With<Player>>,
     camera: Query<(&Camera, &GlobalTransform)>,
-    mut highlight: ResMut<DebugShapes>,
+    mut highlight: Gizmos,
     mut chunks: Query<&mut ChunkData>,
     mut added_events: EventWriter<VoxelAddedEvent>,
     mut removed_events: EventWriter<VoxelRemovedEvent>,
@@ -62,26 +61,32 @@ pub(super) fn interact(
 
     const RAY_STEP: f32 = 0.5;
     for (camera, camera_transform) in camera.iter() {
-        let Some(ray) = camera.viewport_to_world(camera_transform, cursor_position) else { return; };
+        let Some(ray) = camera.viewport_to_world(camera_transform, cursor_position) else {
+            return;
+        };
 
         for i in 1..10 {
             let ray_pos = ray.get_point(i as f32 * RAY_STEP);
             let voxel_pos = GlobalVoxelPos::from_global_coords(ray_pos);
             let (mut chunk_pos, mut local_pos) = voxel_pos.to_chunk_local();
 
-            let Some(chunk_entity) = loaded_chunks.get_chunk(chunk_pos) else { continue; };
-            let Ok(mut chunk_data) = chunks.get_mut(*chunk_entity) else { continue; };
+            let Some(chunk_entity) = loaded_chunks.get_chunk(chunk_pos) else {
+                continue;
+            };
+            let Ok(mut chunk_data) = chunks.get_mut(*chunk_entity) else {
+                continue;
+            };
 
             if !chunk_data
                 .get(local_pos.x, local_pos.y, local_pos.z)
                 .is_empty()
             {
                 // Highlight selected block
-                highlight
-                    .cuboid()
-                    .position(voxel_pos.to_global_coords() + 0.5)
-                    .size(Vec3::splat(1.02))
-                    .color(Color::BLACK);
+                highlight.cuboid(
+                    Transform::from_translation(voxel_pos.to_global_coords() + 0.5)
+                        .with_scale(Vec3::splat(1.02)),
+                    Color::BLACK,
+                );
 
                 // Interact with selected block
                 let changed = if mouse_input.just_pressed(MouseButton::Left) {
@@ -92,7 +97,9 @@ pub(super) fn interact(
                     true
                 } else if mouse_input.just_pressed(MouseButton::Right) {
                     // Stop if player has no block in hand
-                    let Some(player_equipped_block) = current_block.0 else { return; };
+                    let Some(player_equipped_block) = current_block.0 else {
+                        return;
+                    };
 
                     // Place in previous spot
                     // FIXME: Place on selected face, not just previous ray voxel
@@ -118,8 +125,12 @@ pub(super) fn interact(
                     let mut prev_chunk_data = if chunk_pos == prev_chunk_pos {
                         chunk_data
                     } else {
-                        let Some(chunk_entity) = loaded_chunks.get_chunk(prev_chunk_pos) else { continue; };
-                        let Ok(chunk_data) = chunks.get_mut(*chunk_entity) else { continue; };
+                        let Some(chunk_entity) = loaded_chunks.get_chunk(prev_chunk_pos) else {
+                            continue;
+                        };
+                        let Ok(chunk_data) = chunks.get_mut(*chunk_entity) else {
+                            continue;
+                        };
                         chunk_data
                     };
                     prev_chunk_data.set(

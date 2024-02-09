@@ -29,15 +29,13 @@ pub struct MesherPlugin;
 
 impl Plugin for MesherPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_system(enqueue_meshing_tasks)
-            .add_system(
-                handle_done_meshing_tasks
-                    .run_if(resource_exists::<TerrainMaterial>())
-                    .in_base_set(CoreSet::PostUpdate),
-            )
-            .add_system(rapier_slowdown_workaround);
+        app.add_systems(Update, (enqueue_meshing_tasks, rapier_slowdown_workaround))
+            .add_systems(
+                PostUpdate,
+                handle_done_meshing_tasks.run_if(resource_exists::<TerrainMaterial>()),
+            );
 
-        app.add_plugin(MaterialPlugin::<TerrainTextureMaterial>::default())
+        app.add_plugins(MaterialPlugin::<TerrainTextureMaterial>::default())
             .add_collection_to_loading_state::<_, render::TerrainTexture>(GameStates::AssetLoading)
             .init_resource_after_loading_state::<_, TerrainMaterial>(GameStates::AssetLoading);
     }
@@ -165,7 +163,7 @@ fn handle_done_meshing_tasks(
 
             solid_commands.remove::<ComputeMesh>();
 
-            let transparent_chunk_entity = children.and_then(|children| children.get(0));
+            let transparent_chunk_entity = children.and_then(|children| children.first());
             if let Some(transparent_mesh) = transparent_mesh {
                 if let Some(transparent_chunk_entity) = transparent_chunk_entity {
                     let mut transparent_commands = commands.entity(*transparent_chunk_entity);

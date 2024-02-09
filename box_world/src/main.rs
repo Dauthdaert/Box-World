@@ -1,17 +1,9 @@
 use std::io::Cursor;
+use winit::window::Icon;
 
-use bevy::{
-    prelude::{Entity, NonSend, Query, With},
-    window::Window,
-    winit::WinitWindows,
-};
+use bevy::{app::Startup, prelude::NonSend, winit::WinitWindows};
 
-fn set_window_icon(winit_windows: NonSend<WinitWindows>, windows: Query<Entity, With<Window>>) {
-    let window = windows.single();
-    let primary = winit_windows
-        .get_window(window)
-        .expect("Primary window should exist.");
-
+fn set_window_icon(winit_windows: NonSend<WinitWindows>) {
     let (icon_rgba, icon_width, icon_height) = {
         let icon_buf = Cursor::new(include_bytes!("../assets/icon.png"));
         let rgba = image::load(icon_buf, image::ImageFormat::Png)
@@ -23,14 +15,15 @@ fn set_window_icon(winit_windows: NonSend<WinitWindows>, windows: Query<Entity, 
         (icon_raw, width, height)
     };
 
-    let icon = winit::window::Icon::from_rgba(icon_rgba, icon_width, icon_height)
-        .expect("Failed to load icon.");
-    primary.set_window_icon(Some(icon));
+    let icon = Icon::from_rgba(icon_rgba, icon_width, icon_height).expect("Failed to load icon.");
+    winit_windows.windows.values().for_each(|window| {
+        window.set_window_icon(Some(icon.clone()));
+    });
 }
 
 fn main() {
     let mut app = box_world::app();
 
-    app.add_startup_system(set_window_icon);
+    app.add_systems(Startup, set_window_icon);
     app.run();
 }

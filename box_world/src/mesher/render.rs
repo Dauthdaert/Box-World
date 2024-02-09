@@ -1,7 +1,6 @@
 use bevy::{
     pbr::StandardMaterialFlags,
     prelude::*,
-    reflect::TypeUuid,
     render::{mesh::MeshVertexAttribute, render_resource::*},
 };
 use bevy_asset_loader::prelude::*;
@@ -106,8 +105,7 @@ pub const ATTRIBUTE_VOXEL_INDICES: MeshVertexAttribute =
 pub const ATTRIBUTE_VOXEL_LIGHTS: MeshVertexAttribute =
     MeshVertexAttribute::new("VoxelLights", 187234876, VertexFormat::Float32x2);
 
-#[derive(AsBindGroup, Debug, Clone, TypeUuid)]
-#[uuid = "8033ab15-49da-4f1f-b2aa-ecda82927520"]
+#[derive(AsBindGroup, Debug, Clone, Asset, TypePath)]
 #[bind_group_data(TerrainTextureMaterialKey)]
 #[uniform(0, TerrainTextureMaterialUniform)]
 pub struct TerrainTextureMaterial {
@@ -158,12 +156,9 @@ impl Material for TerrainTextureMaterial {
             Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
             Mesh::ATTRIBUTE_NORMAL.at_shader_location(1),
             Mesh::ATTRIBUTE_UV_0.at_shader_location(2),
-            // Pos 3: TANGENT
-            Mesh::ATTRIBUTE_COLOR.at_shader_location(4),
-            // Pos 5: JOINT_INDEX
-            // Pos 6: JOINT_HEIGHT
-            ATTRIBUTE_VOXEL_INDICES.at_shader_location(7),
-            ATTRIBUTE_VOXEL_LIGHTS.at_shader_location(8),
+            Mesh::ATTRIBUTE_COLOR.at_shader_location(3),
+            ATTRIBUTE_VOXEL_INDICES.at_shader_location(4),
+            ATTRIBUTE_VOXEL_LIGHTS.at_shader_location(5),
         ])?;
         descriptor.vertex.buffers = vec![vertex_layout];
         Ok(())

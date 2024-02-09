@@ -17,9 +17,12 @@ pub struct GeneratorPlugin;
 
 impl Plugin for GeneratorPlugin {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_system(enqueue_chunk_generation_tasks.run_if(resource_exists::<VoxelRegistry>()));
+        app.add_systems(
+            Update,
+            enqueue_chunk_generation_tasks.run_if(resource_exists::<VoxelRegistry>()),
+        );
 
-        app.add_system(handle_done_generation_tasks.in_base_set(CoreSet::PostUpdate));
+        app.add_systems(PostUpdate, handle_done_generation_tasks);
     }
 }
 

@@ -98,7 +98,7 @@ pub(super) fn movement_input(
             let y = fps_camera.velocity.y;
             fps_camera.velocity.y = 0.0;
             fps_camera.velocity = movement;
-            if key_events.pressed(KeyCode::LShift) {
+            if key_events.pressed(KeyCode::ShiftLeft) {
                 fps_camera.velocity *= PLAYER_RUN_SPEED * PLAYER_SPRINT_MOD;
             } else {
                 fps_camera.velocity *= PLAYER_RUN_SPEED;
@@ -161,6 +161,7 @@ pub(super) fn movement_collision(
                 movement_left,
                 &shape,
                 1.0,
+                true,
                 filter,
             ) {
                 None => {
@@ -177,7 +178,9 @@ pub(super) fn movement_collision(
                         fps_camera.velocity = Vec3::new(0.0, 0.0, 0.0);
                         break;
                     }
-                    movement_left -= movement_left.dot(toi.normal1) * toi.normal1;
+                    if let Some(details) = toi.details {
+                        movement_left -= movement_left.dot(details.normal1) * details.normal1;
+                    }
                     fps_camera.velocity = movement_left / time.delta().as_secs_f32();
                 }
             }
@@ -193,6 +196,7 @@ pub(super) fn movement_collision(
                 Vec3::new(0.0, -1.0, 0.0),
                 &feet_shape,
                 leg_height,
+                true,
                 filter,
             ) {
                 transforms.get_mut(entity_player).unwrap().translation -=

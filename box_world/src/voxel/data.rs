@@ -1,10 +1,15 @@
-use bevy::reflect::TypeUuid;
+use bevy::{
+    asset::Asset,
+    reflect::{TypePath, TypeUuid},
+};
 use serde::{Deserialize, Serialize};
 
 use crate::mesher::VoxelVisibility;
 
 #[allow(dead_code)]
-#[derive(Debug, Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TypeUuid)]
+#[derive(
+    Debug, Copy, Clone, Default, PartialEq, Eq, Serialize, Deserialize, TypeUuid, Asset, TypePath,
+)]
 #[uuid = "2f63c7be-0955-40b0-8b5f-845a5f3eba9a"]
 pub struct Voxel {
     visibility: VoxelVisibility,

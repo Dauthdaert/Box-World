@@ -3,10 +3,6 @@ use bevy::{
     input::common_conditions::input_toggle_active,
     pbr::wireframe::{WireframeConfig, WireframePlugin},
     prelude::*,
-    render::{
-        settings::{WgpuFeatures, WgpuSettings},
-        RenderPlugin,
-    },
     window::PresentMode,
 };
 use bevy_asset_loader::prelude::*;
@@ -42,49 +38,47 @@ pub fn app() -> App {
                 }),
                 ..default()
             })
-            .set(ImagePlugin::default_nearest())
-            .set(RenderPlugin {
-                wgpu_settings: WgpuSettings {
-                    features: WgpuFeatures::POLYGON_MODE_LINE,
-                    ..default()
-                },
-            })
-            .set(AssetPlugin {
-                watch_for_changes: true,
-                ..default()
-            }),
+            .set(ImagePlugin::default_nearest()),
     )
     .insert_resource(Msaa::Sample8);
 
     #[cfg(debug_assertions)]
     {
-        app.add_plugin(
+        app.add_plugins(
             WorldInspectorPlugin::default().run_if(input_toggle_active(false, KeyCode::F3)),
         );
 
-        app.add_plugin(FrameTimeDiagnosticsPlugin::default())
-            .add_plugin(LogDiagnosticsPlugin::default())
-            .add_plugin(WireframePlugin);
+        app.add_plugins((
+            FrameTimeDiagnosticsPlugin,
+            LogDiagnosticsPlugin::default(),
+            WireframePlugin,
+        ));
 
         // Wireframe defaults to off
-        app.add_system(toggle_wireframe);
+        app.add_systems(Update, toggle_wireframe);
     }
 
     app.add_state::<GameStates>().add_loading_state(
         LoadingState::new(GameStates::AssetLoading).continue_to_state(GameStates::WorldLoading),
     );
 
-    app.add_startup_system(setup)
+    app.add_systems(Startup, setup)
         .insert_resource(LoadingTimer::new())
-        .add_system(setup.in_schedule(OnEnter(GameStates::WorldLoading)))
-        .add_system(transition_after_load.run_if(in_state::<GameStates>(GameStates::WorldLoading)));
+        .add_systems(OnEnter(GameStates::WorldLoading), setup)
+        .add_systems(
+            Update,
+            transition_after_load.run_if(in_state(GameStates::WorldLoading)),
+        );
 
-    app.add_plugin(voxel::VoxelPlugin);
-    app.add_plugin(chunk::ChunkPlugin);
-    app.add_plugin(world_generator::GeneratorPlugin);
-    app.add_plugin(mesher::MesherPlugin);
-    app.add_plugin(player::PlayerPlugin);
-    app.add_plugin(environment::EnvironmentPlugin);
+    app.add_plugins((
+        voxel::VoxelPlugin,
+        chunk::ChunkPlugin,
+        world_generator::GeneratorPlugin,
+        mesher::MesherPlugin,
+        player::PlayerPlugin,
+        environment::EnvironmentPlugin,
+        lighting::LightingPlugin,
+    ));
 
     app
 }
@@ -131,14 +125,18 @@ fn transition_after_load(
         let player_chunk_pos = ChunkPos::from_global_coords(player);
 
         // Check current chunk
-        let Some(current) = loaded_chunks.get_chunk(player_chunk_pos) else { return; };
+        let Some(current) = loaded_chunks.get_chunk(player_chunk_pos) else {
+            return;
+        };
         if chunks.get(*current).is_err() {
             return;
         }
 
         // Check neighbor chunks
         for neighbor in ChunkPos::neighbors(&player_chunk_pos) {
-            let Some(neighbor) = loaded_chunks.get_chunk(neighbor) else { return; };
+            let Some(neighbor) = loaded_chunks.get_chunk(neighbor) else {
+                return;
+            };
             if chunks.get(*neighbor).is_err() {
                 return;
             }
