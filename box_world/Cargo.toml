@@ -45,7 +45,7 @@ default = [
 [dependencies]
 winit = "0.28"
 image = "0.24.6"
-bevy = { version = "0.12", default-features = false }
+bevy = { version = "0.14", default-features = false }
 bevy_kira_audio = { version = "0.18", default-features = false }
 bevy-inspector-egui = "0.22"
 bevy_rapier3d = { version = "0.24.0", default-features = false }
